@@ -12,25 +12,3 @@
   display: grid;
   grid-template-columns: 1fr 6fr;
 }
-
-.sequencer-wrapper {
-  background-color: black;
-  border-radius: 1rem;
-  margin: 2rem;
-}
-
-.sample {
-  background-color: grey;
-}
-
-.sequencer {
-  display: grid;
-  grid-template-columns: 1fr 5fr;
-  grid-gap: .5rem;
-}
-
-.step-sequencer {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  grid-gap: .5rem;
-}
