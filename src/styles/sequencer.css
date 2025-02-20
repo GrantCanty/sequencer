@@ -17,15 +17,31 @@
 
 .step-sequencer {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
     grid-gap: .5rem;
 }
 
-.block {
+div .block {
     border-radius: 0.5rem;
 }
 
-button .block {
-    border: 1px transparent solid;
-    outline: 1px transparent solid;
+button.block {
+    border: none;
+    outline: none;
+    --border-radius: 0.5rem;
+}
+
+button.block {
+    cursor: pointer;
+}
+
+.block.even {
+    background-color: #646464;
+}
+
+.block.odd {
+    background-color: #5e4b4b;
+}
+
+.block.active {
+    filter: brightness(3);
 }
