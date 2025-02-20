@@ -37,8 +37,7 @@ const Sequencer = (props) => {
         async function cycle() {
             while (isPlaying) {
                 setStepIndex(i);
-                console.log(i);
-
+                
                 await sleep(props.sleepTime);
 
                 i = (i + 1) % range.length;
@@ -53,8 +52,6 @@ const Sequencer = (props) => {
             isPlaying = false;
         };
     }, [props.play, props.sleepTime]);
-
-    let index = 0;
 
     return (
         <div className='sequencer-wrapper'>

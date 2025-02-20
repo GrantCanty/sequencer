@@ -21,11 +21,16 @@ function App() {
   }
   const steps_per_beat = 2
   let sleepTime =  (60 / bpm) * 1000 / steps_per_beat
+  const audioFiles = import.meta.glob('./audio/*.wav', { eager: true });
+  const audioList = Object.fromEntries(
+    Object.entries(audioFiles).map(([key, value]) => [key.replace('./audio/', '').replace('.wav', ''), value.default])
+  );
+
 
 
   return (
     <div className='wrapper'>
-      <Sidebar />
+      <Sidebar audioList={audioList} />
       <div className='main-wrapper'>
       <Settings play={play} togglePlay={togglePlay} bpm={bpm} newBpm={newBpm} />
       <Sequencer sleepTime={sleepTime} play={play} />
