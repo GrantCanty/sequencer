@@ -1,56 +1,68 @@
 import React from 'react'
 import '../styles/sequencer.css'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 
 
 const Sequencer = (props) => {
     const steps = 16
-    const range = []
-    const rangerange = []
-    for (let i = 0; i < steps; i++) {
-        range[i] = i
-        rangerange[i] = false
-    }
+    const stepRange = Array(steps).fill(false)
 
-    const [step, setStep] = useState(rangerange)
-
+    const [step, setStep] = useState(stepRange)
+    const stepRef = useRef(step)
     const [stepIndex, setStepIndex] = useState(0)
+    const intervalRef = useRef(null); // Stores the interval ID
+
+    useEffect(() => {
+        stepRef.current = step;
+    }, [step]);
 
     const toggleIndex = (index) => {
-        console.log("index: ", index)
         setStep((prevArray) =>
           prevArray.map((value, i) => (i === index ? !value : value))
         );
     };
 
-    function sleep(ms) {
+    /*function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms))
-    }
+    }*/
 
-    
+    const playSound = () => {
+        const audioInstance = new Audio(props.audio);
+        audioInstance.play();
+    };
 
+    //const audio = new Audio(props.audio)
     useEffect(() => {
-        let isPlaying = props.play;
-        let i = 0;
-
-        async function cycle() {
-            while (isPlaying) {
-                setStepIndex(i);
-                
-                await sleep(props.sleepTime);
-
-                i = (i + 1) % range.length;
-            }
-        }
-
         if (props.play) {
-            cycle();
+            setStepIndex(0);
+            let i = 0;
+            let lastTime = performance.now(); // Track when the last step was triggered
+            const stepDuration = props.sleepTime; // Time per step in ms
+
+            intervalRef.current = setInterval(() => {
+                const currentTime = performance.now();
+                const elapsedTime = currentTime - lastTime;
+
+                if (elapsedTime >= stepDuration) {
+                    i = (i+1) % steps
+                    setStepIndex(i);
+
+                    console.log("stepIndex: ", i)
+
+                    if (stepRef.current[i]) {
+                        playSound();
+                    }
+
+                    lastTime = currentTime - (elapsedTime % stepDuration); // Adjust for drift
+                }
+            }, stepDuration / 10); // Run more frequently to check timing
+
+        } else {
+            clearInterval(intervalRef.current);
         }
 
-        return () => {
-            isPlaying = false;
-        };
+        return () => clearInterval(intervalRef.current);
     }, [props.play, props.sleepTime]);
 
     return (
