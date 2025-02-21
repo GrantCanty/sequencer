@@ -14,6 +14,15 @@ const Sequencer = (props) => {
     const timeoutRef = useRef(null); 
     const audioContextRef = useRef(null);
     const audioBufferRef = useRef(null);
+    const [sounds, setSounds] = useState([]);
+    
+    const defaultSounds = ['clap 1', 'kick 1', 'snare 1']
+    
+    useEffect(() => {
+        const newSounds = defaultSounds.map(val => props.audioList[val]);
+    
+        setSounds(newSounds); // Set the state in one go
+    }, [props.audioList]);
 
     useEffect(() => {
         stepRef.current = step;
@@ -97,7 +106,7 @@ const Sequencer = (props) => {
                         <p>sample</p>
                     </div>
                 </div>
-                <div className='step-sequencer' style={{'grid-template-columns': `repeat(${steps}, 1fr)`}}>
+                <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${steps}, 1fr)`}}>
                     {step.map((val, idx) => {
                         return <button onClick={() => toggleIndex(idx)} className={'block ' + ((idx % 8) - (idx % 4) == 0 ? 'even' : 'odd') + ' ' + (val ? 'active' : 'not-active') } key={idx}> | </button>
                     })}

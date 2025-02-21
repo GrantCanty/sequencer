@@ -7,7 +7,6 @@ import Settings from './assets/settings'
 
 function App() {
   const [play, setPlay] = useState(false)
-  
   const [bpm, setBpm] = useState('125')
 
   const togglePlay = () => {
@@ -19,6 +18,7 @@ function App() {
       setBpm(e.target.value)
     }
   }
+
   const steps_per_beat = 4
   let sleepTime =  (60 / bpm) * 1000 / steps_per_beat
   const audioFiles = import.meta.glob('./audio/*.wav', { eager: true });
@@ -31,7 +31,7 @@ function App() {
       <Sidebar audioList={audioList} />
       <div className='main-wrapper'>
       <Settings play={play} togglePlay={togglePlay} bpm={bpm} newBpm={newBpm} />
-      <Sequencer sleepTime={sleepTime} play={play} audio={audioList['clap 1']}/>
+      <Sequencer sleepTime={sleepTime} play={play} audioList={audioList} audio={audioList['clap 1']}/>
       </div>
     </div>
   )

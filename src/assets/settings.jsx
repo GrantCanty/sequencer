@@ -5,7 +5,6 @@ const Settings = (props) => {
     const [playText, setPlayText] = useState('');
 
     useEffect(() => {
-        console.log(props.play)
         props.play ? setPlayText('stop') : setPlayText('play')
     }, [props.play])
 
