@@ -9,6 +9,12 @@
     background-color: grey;
 }
 
+.sample-area {
+    display: grid;
+    grid-template-columns: 1fr 4fr;
+    grid-gap: .5rem;
+}
+
 .sequencer {
     display: grid;
     grid-template-columns: 1fr 5fr;
@@ -30,7 +36,7 @@ button.block {
     --border-radius: 0.5rem;
 }
 
-button.block {
+.block {
     cursor: pointer;
 }
 

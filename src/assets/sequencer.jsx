@@ -45,7 +45,6 @@ const Sequencer = (props) => {
         }
     };
 
-    //const audio = new Audio(props.audio)
     useEffect(() => {
         if (props.play) {
             setStepIndex(0);
@@ -90,8 +89,13 @@ const Sequencer = (props) => {
         <div className='sequencer-wrapper'>
             <h1>sequencer!!</h1>
             <div className='sequencer'>
-                <div className='sample block'>
-                    <p>sample</p>
+                <div className='sample-area'>
+                    <div className='sample block'>
+                        <p>delete</p>
+                    </div>
+                    <div onClick={ () => playSound() } className='sample block'>
+                        <p>sample</p>
+                    </div>
                 </div>
                 <div className='step-sequencer' style={{'grid-template-columns': `repeat(${steps}, 1fr)`}}>
                     {step.map((val, idx) => {
