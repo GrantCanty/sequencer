@@ -3,42 +3,48 @@ import '../styles/sequencer.css'
 import { useState, useEffect, useRef } from 'react'
 import SampleRow from './samplerow'
 
-
-
 const Sequencer = (props) => {
     const steps = 16
-    const stepRange = Array(steps).fill(false)
+    const defaultSounds = ['clap 1', 'kick 1', 'snare 1']
+    
+    const [sounds, setSounds] = useState({});
+    const [step, setStep] = useState(() => createAndFillTwoDArray({ rows: defaultSounds.length, columns: steps, defaultValue: false }));
+    const stepRef = useRef(step)    
 
-    const [step, setStep] = useState(stepRange)
-    const stepRef = useRef(step)
+    function createAndFillTwoDArray({rows, columns, defaultValue}) {
+        return Array.from({ length:rows }, () => Array.from({ length:columns }, ()=> defaultValue))
+    }
+    
+    useEffect(() => {
+        if(!props.audioList) return
+        
+        const newSounds = {}
+        defaultSounds.forEach((val) => {
+            newSounds[val] = props.audioList[val]
+        });
+
+        console.log('newSounds: ', newSounds)
+    
+        setSounds(newSounds);
+    }, [props.audioList]);
+    
+    useEffect(() => {
+        console.log('sounds', sounds)
+        if (Object.keys(sounds).length > 0) {
+            const stepRange = createAndFillTwoDArray({rows:Object.keys(sounds).length, columns:steps, defaultValue:false})
+            setStep(stepRange)
+        }
+    }, [sounds])
+
     const [stepIndex, setStepIndex] = useState(0)
     const timeoutRef = useRef(null); 
     const audioContextRef = useRef(null);
     const audioBufferRef = useRef(null);
-    const [sounds, setSounds] = useState({});
-    
-    const defaultSounds = ['clap 1', 'kick 1', 'snare 1']
-    
-    useEffect(() => {
-        const newSounds = {}
-        defaultSounds.map((val) => {
-            newSounds[val] = props.audioList[val]
-        });
-    
-        setSounds(newSounds);
-    }, [props.audioList]);
-
-    //console.log(Object.keys(sounds))
 
     useEffect(() => {
         stepRef.current = step;
+        console.log("step: ", step)
     }, [step]);
-
-    const toggleIndex = (index) => {
-        setStep((prevArray) =>
-          prevArray.map((value, i) => (i === index ? !value : value))
-        );
-    };
 
     useEffect(() => {
         const loadAudio = async () => {
@@ -104,9 +110,8 @@ const Sequencer = (props) => {
         <div className='sequencer-wrapper'>
             <h1>sequencer!!</h1>
             <div className='sequencer'>
-                {Object.keys(sounds).map((audio) => {
-
-                    return <SampleRow audio={audio} playSound={""} steps={steps} step={step} />
+                {Object.keys(sounds).map((audio, index) => {
+                    return <SampleRow key={index} index={index} audio={audio} playSound={""} steps={steps} step={step} setStep={setStep} />
                 })}
                 
             </div>
