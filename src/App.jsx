@@ -25,7 +25,7 @@ function App() {
   const audioList = Object.fromEntries(
     Object.entries(audioFiles).map(([key, value]) => [key.replace('./audio/', '').replace('.wav', ''), value.default])
   );
-
+  
   return (
     <div className='wrapper'>
       <Sidebar audioList={audioList} />

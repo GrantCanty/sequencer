@@ -1,6 +1,7 @@
 import React from 'react'
 import '../styles/sequencer.css'
 import { useState, useEffect, useRef } from 'react'
+import SampleRow from './samplerow'
 
 
 
@@ -14,15 +15,20 @@ const Sequencer = (props) => {
     const timeoutRef = useRef(null); 
     const audioContextRef = useRef(null);
     const audioBufferRef = useRef(null);
-    const [sounds, setSounds] = useState([]);
+    const [sounds, setSounds] = useState({});
     
     const defaultSounds = ['clap 1', 'kick 1', 'snare 1']
     
     useEffect(() => {
-        const newSounds = defaultSounds.map(val => props.audioList[val]);
+        const newSounds = {}
+        defaultSounds.map((val) => {
+            newSounds[val] = props.audioList[val]
+        });
     
-        setSounds(newSounds); // Set the state in one go
+        setSounds(newSounds);
     }, [props.audioList]);
+
+    //console.log(Object.keys(sounds))
 
     useEffect(() => {
         stepRef.current = step;
@@ -98,19 +104,11 @@ const Sequencer = (props) => {
         <div className='sequencer-wrapper'>
             <h1>sequencer!!</h1>
             <div className='sequencer'>
-                <div className='sample-area'>
-                    <div className='sample block'>
-                        <p>delete</p>
-                    </div>
-                    <div onClick={ () => playSound() } className='sample block'>
-                        <p>sample</p>
-                    </div>
-                </div>
-                <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${steps}, 1fr)`}}>
-                    {step.map((val, idx) => {
-                        return <button onClick={() => toggleIndex(idx)} className={'block ' + ((idx % 8) - (idx % 4) == 0 ? 'even' : 'odd') + ' ' + (val ? 'active' : 'not-active') } key={idx}> | </button>
-                    })}
-                </div>
+                {Object.keys(sounds).map((audio) => {
+
+                    return <SampleRow audio={audio} playSound={""} steps={steps} step={step} />
+                })}
+                
             </div>
         </div>
     )
