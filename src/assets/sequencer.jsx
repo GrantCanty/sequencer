@@ -39,14 +39,14 @@ const Sequencer = (props) => {
     const [stepIndex, setStepIndex] = useState(0)
     const timeoutRef = useRef(null); 
     const audioContextRef = useRef(null);
-    const audioBufferRef = useRef(null);
+    const audioBuffersRef = useRef(null);
 
     useEffect(() => {
         stepRef.current = step;
         console.log("step: ", step)
     }, [step]);
 
-    useEffect(() => {
+    /*useEffect(() => {
         const loadAudio = async () => {
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
             const response = await fetch(props.audio);
@@ -55,12 +55,53 @@ const Sequencer = (props) => {
             audioBufferRef.current = audioBuffer;
         };
         loadAudio();
-    }, [props.audio]);
 
-    const playSound = () => {
-        if (audioContextRef.current && audioBufferRef.current) {
+        return () => {
+            audioContextRef.current?.close(); // Closes the AudioContext when component unmounts
+        };
+    }, [props.audio]);*/
+
+    useEffect(() => {
+        if (!sounds || sounds === undefined || Object.keys(sounds).length === 0) {
+            return
+        }
+
+        if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        } else if (audioContextRef.current.state === "suspended") {
+            audioContextRef.current.resume();
+        } else {
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        const loadAudio = async () => {
+            const buffers = {};
+            await Promise.all(Object.keys(sounds).map(async (file) => {
+                try {
+                    const response = await fetch(sounds[file])
+                    const arrayBuffer = await response.arrayBuffer();
+                    const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+                    buffers[file] = audioBuffer;
+                } catch(err) {
+                    console.log(err)
+                }
+            }))   
+            audioBuffersRef.current = buffers
+            console.log(audioBuffersRef)
+        }
+        loadAudio()
+    }, [sounds])
+
+    const playSound = (file) => {
+        if (!audioContextRef.current || !audioBuffersRef.current[file]) return;
+
+        if (audioContextRef.current.state === "suspended") {
+            audioContextRef.current.resume();
+        }
+        
+        if (audioContextRef.current && audioBuffersRef.current[file]) {
             const source = audioContextRef.current.createBufferSource();
-            source.buffer = audioBufferRef.current;
+            source.buffer = audioBuffersRef.current[file];
             source.connect(audioContextRef.current.destination);
             source.start();
         }
@@ -111,7 +152,7 @@ const Sequencer = (props) => {
             <h1>sequencer!!</h1>
             <div className='sequencer'>
                 {Object.keys(sounds).map((audio, index) => {
-                    return <SampleRow key={index} index={index} audio={audio} playSound={""} steps={steps} step={step} setStep={setStep} />
+                    return <SampleRow key={index} index={index} audio={audio} playSound={playSound} steps={steps} step={step} setStep={setStep} />
                 })}
                 
             </div>

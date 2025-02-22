@@ -7,7 +7,7 @@ const SampleArea = (props) => {
             <div className='sample block'>
                 <p>delete</p>
             </div>
-            <div onClick={ () => props.playSound() } className='sample block'>
+            <div onClick={ () => props.playSound(props.audio) } className='sample block'>
                 <p>{props.audio}</p>
             </div>
         </div>

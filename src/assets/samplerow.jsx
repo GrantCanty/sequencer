@@ -21,14 +21,14 @@ const SampleRow = (props) => {
     console.log('samplerow step: ', props.step)
     return (
         <>
-            <SampleArea audio={props.audio} />
+            <SampleArea audio={props.audio} playSound={props.playSound} />
             <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${props.steps}, 1fr)`}}>
                     {props.step == [] || props.step === undefined ? null :
                         Object.keys(props.step[props.index]).length >0 ?
                             props.step[props.index].map((val, idx) => {
                                 return <button onClick={() => toggleIndex( idx)} className={ `block ${((idx % 8) - (idx % 4) == 0 ? 'even' : 'odd')} ${(val ? 'active' : 'not-active')}` } key={idx}> | </button>
                             }) : null
-                        }
+                    }
             </div>
         </>
     )
