@@ -37,6 +37,15 @@ div.block {
     --border-radius: 0.5rem;
 }
 
+div.sample-area:nth-child(1) div.block {
+    background-color: transparent;
+    cursor: default;
+}
+
+div.step-sequencer:nth-child(2) div.block {
+    cursor: default;
+}
+
 .block {
     cursor: pointer;
 }
@@ -54,7 +63,7 @@ div.block {
 }
 
 div.active {
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.9);
 }
 
 div.not-active {

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import SampleRow from './samplerow'
 
 const Sequencer = (props) => {
-    const steps = 16
+    const steps = 32
     const defaultSounds = ['clap 1', 'kick 1', 'snare 1']
     
     const [sounds, setSounds] = useState({});
@@ -140,7 +140,7 @@ const Sequencer = (props) => {
                     {step == [] || step === undefined ? null :
                         Object.keys(step[0]).length >0 ?
                             step[0].map((_, idx) => {
-                                return <div className={ `block ${stepIndex === idx ? 'active' : 'not-active'}` } key={idx}> </div>
+                                return <div className={ `block ${stepIndex === idx ? 'active' : 'not-active'}` } key={idx}> { (idx / ((idx % 4)+1) / 4 + 1) % 1 == 0 ? idx / ((idx % 4)+1) / 4 % 4 + 1 : null } </div>
                             }) : null
                     }
                 </div>
