@@ -30,7 +30,8 @@ div .block {
     border-radius: 0.5rem;
 }
 
-button.block {
+button.block,
+div.block {
     border: none;
     outline: none;
     --border-radius: 0.5rem;
@@ -50,4 +51,12 @@ button.block {
 
 .block.active {
     filter: brightness(3);
+}
+
+div.active {
+    background-color: white;
+}
+
+div.not-active {
+    background-color: #3a3a3a;
 }

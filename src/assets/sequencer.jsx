@@ -9,7 +9,11 @@ const Sequencer = (props) => {
     
     const [sounds, setSounds] = useState({});
     const [step, setStep] = useState(() => createAndFillTwoDArray({ rows: defaultSounds.length, columns: steps, defaultValue: false }));
-    const stepRef = useRef(step)    
+    const stepRef = useRef(step)   
+    const [stepIndex, setStepIndex] = useState(0)
+    const timeoutRef = useRef(null); 
+    const audioContextRef = useRef(null);
+    const audioBuffersRef = useRef(null); 
 
     function createAndFillTwoDArray({rows, columns, defaultValue}) {
         return Array.from({ length:rows }, () => Array.from({ length:columns }, ()=> defaultValue))
@@ -24,11 +28,6 @@ const Sequencer = (props) => {
         });
         setSounds(newSounds);
     }, [props.audioList]);
-
-    const [stepIndex, setStepIndex] = useState(0)
-    const timeoutRef = useRef(null); 
-    const audioContextRef = useRef(null);
-    const audioBuffersRef = useRef(null);
 
     useEffect(() => {
         stepRef.current = step;
@@ -85,35 +84,38 @@ const Sequencer = (props) => {
             setStepIndex(0);
             let i = 0;
 
-            stepRef.current.forEach((val, idx) => {
+            /*stepRef.current.forEach((val, idx) => {
                 if (val[i]) {
+                    console.log("played ", s[idx])
                     playSound(s[idx])
                 }
-            })
+            })*/
 
             let lastTime = performance.now(); // Track when the last step was triggered
             const stepDuration = props.sleepTime; // Time per step in ms
 
-            const scheduleStep = () => {
+            const scheduleStep = (firstRun = false) => {
                 const currentTime = performance.now();
                 const elapsedTime = currentTime - lastTime;
 
-                if (elapsedTime >= stepDuration) {
-                    i = (i+1) % steps
-                    setStepIndex(i);
-
+                if (firstRun || elapsedTime >= stepDuration) {
                     stepRef.current.forEach((val, idx) => {
                         if (val[i]) {
                             playSound(s[idx])
+                            firstRun = false
                         }
                     })
 
-                    lastTime = currentTime - (elapsedTime % stepDuration); // Adjust for drift
+                    if(!firstRun) {
+                        setStepIndex(i);
+                        i = (i+1) % steps
+                        lastTime = currentTime - (elapsedTime % stepDuration); // Adjust for drift
+                    }
                 }
 
                 timeoutRef.current = setTimeout(scheduleStep, stepDuration/10)
             }
-            scheduleStep()
+            scheduleStep(true)
 
         } else {
             clearTimeout(timeoutRef.current);
@@ -126,10 +128,26 @@ const Sequencer = (props) => {
         <div className='sequencer-wrapper'>
             <h1>sequencer!!</h1>
             <div className='sequencer'>
+                <div className='sample-area'>
+                    <div className='sample block'>
+                        <p></p>
+                    </div>
+                    <div className='sample block'>
+                        <p>{""}</p>
+                    </div>
+                </div>
+                <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${steps}, 1fr)`}}>
+                    {step == [] || step === undefined ? null :
+                        Object.keys(step[0]).length >0 ?
+                            step[0].map((_, idx) => {
+                                return <div className={ `block ${stepIndex === idx ? 'active' : 'not-active'}` } key={idx}> </div>
+                            }) : null
+                    }
+                </div>
+
                 {Object.keys(sounds).map((audio, index) => {
                     return <SampleRow key={index} index={index} audio={audio} playSound={playSound} steps={steps} step={step} setStep={setStep} />
                 })}
-                
             </div>
         </div>
     )
