@@ -22,19 +22,8 @@ const Sequencer = (props) => {
         defaultSounds.forEach((val) => {
             newSounds[val] = props.audioList[val]
         });
-
-        console.log('newSounds: ', newSounds)
-    
         setSounds(newSounds);
     }, [props.audioList]);
-    
-    useEffect(() => {
-        console.log('sounds', sounds)
-        if (Object.keys(sounds).length > 0) {
-            const stepRange = createAndFillTwoDArray({rows:Object.keys(sounds).length, columns:steps, defaultValue:false})
-            setStep(stepRange)
-        }
-    }, [sounds])
 
     const [stepIndex, setStepIndex] = useState(0)
     const timeoutRef = useRef(null); 
@@ -43,23 +32,7 @@ const Sequencer = (props) => {
 
     useEffect(() => {
         stepRef.current = step;
-        console.log("step: ", step)
     }, [step]);
-
-    /*useEffect(() => {
-        const loadAudio = async () => {
-            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-            const response = await fetch(props.audio);
-            const arrayBuffer = await response.arrayBuffer();
-            const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
-            audioBufferRef.current = audioBuffer;
-        };
-        loadAudio();
-
-        return () => {
-            audioContextRef.current?.close(); // Closes the AudioContext when component unmounts
-        };
-    }, [props.audio]);*/
 
     useEffect(() => {
         if (!sounds || sounds === undefined || Object.keys(sounds).length === 0) {
@@ -87,7 +60,6 @@ const Sequencer = (props) => {
                 }
             }))   
             audioBuffersRef.current = buffers
-            console.log(audioBuffersRef)
         }
         loadAudio()
     }, [sounds])
@@ -107,14 +79,17 @@ const Sequencer = (props) => {
         }
     };
 
-    useEffect(() => {
+    useEffect(() => {        
         if (props.play) {
+            let s = Object.keys(sounds)
             setStepIndex(0);
             let i = 0;
 
-            if (stepRef.current[i]) {
-                playSound();
-            }
+            stepRef.current.forEach((val, idx) => {
+                if (val[i]) {
+                    playSound(s[idx])
+                }
+            })
 
             let lastTime = performance.now(); // Track when the last step was triggered
             const stepDuration = props.sleepTime; // Time per step in ms
@@ -126,18 +101,18 @@ const Sequencer = (props) => {
                 if (elapsedTime >= stepDuration) {
                     i = (i+1) % steps
                     setStepIndex(i);
-                    console.log("stepIndex: ", i)
 
-                    if (stepRef.current[i]) {
-                        playSound();
-                    }
+                    stepRef.current.forEach((val, idx) => {
+                        if (val[i]) {
+                            playSound(s[idx])
+                        }
+                    })
 
                     lastTime = currentTime - (elapsedTime % stepDuration); // Adjust for drift
                 }
 
                 timeoutRef.current = setTimeout(scheduleStep, stepDuration/10)
             }
-
             scheduleStep()
 
         } else {
@@ -145,7 +120,7 @@ const Sequencer = (props) => {
         }
 
         return () => clearTimeout(timeoutRef.current);
-    }, [props.play, props.sleepTime]);
+    }, [props.play, props.sleepTime, sounds]);
 
     return (
         <div className='sequencer-wrapper'>

@@ -25,8 +25,6 @@ function App() {
   const audioList = Object.fromEntries(
     Object.entries(audioFiles).map(([key, value]) => [key.replace('./audio/', '').replace('.wav', ''), value.default])
   );
-
-  console.log("audioList: ", audioList)
   
   return (
     <div className='wrapper'>

@@ -18,7 +18,6 @@ const SampleRow = (props) => {
         return <div>Loading...</div>
     }
 
-    console.log('samplerow step: ', props.step)
     return (
         <>
             <SampleArea audio={props.audio} playSound={props.playSound} />
