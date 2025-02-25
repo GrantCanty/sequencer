@@ -32,7 +32,7 @@ const Sidebar = (props) => {
             await Promise.all(Object.keys(props.audioList).map(async (audioFile, index) => {
                 try {
                     await ffmpeg.writeFile(`sound${index}.wav`, await fetchFile(props.audioList[audioFile]))
-                    await ffmpeg.exec(['-i', `sound${index}.wav`, '-filter_complex', "showwavespic=s=640x120:colors=#5000FF", '-frames:v', '1', `output${index}.png`])
+                    await ffmpeg.exec(['-i', `sound${index}.wav`, '-filter_complex', "compand,showwavespic=s=640x120:colors=#FFFFFF", '-frames:v', '1', `output${index}.png`])
                     let pic = await ffmpeg.readFile(`output${index}.png`)
                     
                     const blob = new Blob([pic], { type: 'image/png' });
