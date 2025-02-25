@@ -20,7 +20,7 @@ const SampleRow = (props) => {
 
     return (
         <>
-            <SampleArea audio={props.audio} playSound={props.playSound} />
+            <SampleArea index={props.index} audio={props.audio} playSound={props.playSound} delete={props.delete} />
             <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${props.steps}, 1fr)`}}>
                     {props.step == [] || props.step === undefined ? null :
                         Object.keys(props.step[props.index]).length >0 ?

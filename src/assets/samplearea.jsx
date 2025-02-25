@@ -4,8 +4,12 @@ const SampleArea = (props) => {
     
     return (
         <div className='sample-area'>
-            <div className='sample block'>
-                <p>X</p>
+            <div className='sample block' onClick={ () => props.delete(props.index) }>
+                <p>
+                    <span className="material-symbols-outlined">
+                        delete
+                    </span>
+                </p>
             </div>
             <div onClick={ () => props.playSound(props.audio) } className='sample block'>
                 <p>{props.audio}</p>

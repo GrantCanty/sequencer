@@ -124,6 +124,24 @@ const Sequencer = (props) => {
         return () => clearTimeout(timeoutRef.current);
     }, [props.play, props.sleepTime, sounds]);
 
+    const deleteBlock = (index) => {
+        const newArr = []
+        step.map((row, rowIndex) => {
+            if (rowIndex !== index) {
+                newArr.push(row)
+            }
+        })
+        setStep(newArr)
+
+        const newSounds = {}
+        Object.keys(sounds).map((sound, soundIndex) => {
+            if (soundIndex !== index) {
+                newSounds[sound] = sounds[sound]
+            }
+        })
+        setSounds(newSounds)
+    }
+
     return (
         <div className='sequencer-wrapper'>
             <h1>sequencer!!</h1>
@@ -137,7 +155,7 @@ const Sequencer = (props) => {
                     </div>
                 </div>
                 <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${steps}, 1fr)`}}>
-                    {step == [] || step === undefined ? null :
+                    {step.length === 0 || step === undefined ? null :
                         Object.keys(step[0]).length >0 ?
                             step[0].map((_, idx) => {
                                 return <div className={ `block ${stepIndex === idx ? 'active' : 'not-active'}` } key={idx}> { (idx / ((idx % 4)+1) / 4 + 1) % 1 == 0 ? idx / ((idx % 4)+1) / 4 % 4 + 1 : null } </div>
@@ -146,7 +164,7 @@ const Sequencer = (props) => {
                 </div>
 
                 {Object.keys(sounds).map((audio, index) => {
-                    return <SampleRow key={index} index={index} audio={audio} playSound={playSound} steps={steps} step={step} setStep={setStep} />
+                    return <SampleRow key={index} index={index} audio={audio} playSound={playSound} steps={steps} step={step} setStep={setStep} delete={deleteBlock} />
                 })}
             </div>
         </div>
