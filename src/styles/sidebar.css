@@ -17,3 +17,8 @@
 .sidebar .sidebar-items .sidebar-item img {
     max-width: 100%;
 }
+
+.sidebar-field.overlay {
+    background: black;
+    color: white;
+  }

@@ -11,7 +11,6 @@ import { nanoid } from "nanoid";
 
 export function SidebarField(props) {
     const { audioFile, pic, overlay } = props;
-    console.log('sidebarField: ', audioFile, '\nrest: ', pic)
   
     let className = "sidebar-field";
     if (overlay) {
@@ -26,7 +25,6 @@ export function SidebarField(props) {
 
 function DraggableSidebarField(props) {
     const { audioFile, pic, ...rest } = props;
-    console.log("audioFile: ", audioFile, '\npic: ', pic)
   
     const id = useRef(nanoid());
   
@@ -109,7 +107,7 @@ const Sidebar = (props) => {
     
     return(
         <>
-            <div className="sidebar">
+            <div key={props.fieldsRegKey} className="sidebar">
                 <div className="sidebar-items">
                     {/*<h1>yoo</h1>
                     <ul>*/}
