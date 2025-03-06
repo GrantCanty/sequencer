@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import './App.css'
 import './assets/sidebar'
-import Sidebar from './assets/sidebar'
+import Sidebar, { SidebarField } from './assets/sidebar'
 import Sequencer from './assets/sequencer'
 import Settings from './assets/settings'
 import { DndContext, DragOverlay } from "@dnd-kit/core";
@@ -197,9 +197,15 @@ function App() {
       >
         <Sidebar audioList={audioList} fieldsRegKey={sidebarFieldsRegenKey} />
         <div className='main-wrapper'>
-        <Settings play={play} togglePlay={togglePlay} bpm={bpm} newBpm={newBpm} />
-        <Sequencer sleepTime={sleepTime} play={play} audioList={audioList} audio={audioList['clap 1']}/>
+          <Settings play={play} togglePlay={togglePlay} bpm={bpm} newBpm={newBpm} />
+          <Sequencer sleepTime={sleepTime} play={play} audioList={audioList} audio={audioList['clap 1']}/>
         </div>
+        <DragOverlay dropAnimation={false}>
+            {activeSidebarField ? (
+              <SidebarField overlay audioFile={activeSidebarField} />
+            ) : null}
+            {activeField ? <Field overlay audioFile={activeField} /> : null}
+          </DragOverlay>
       </DndContext>
     </div>
   )

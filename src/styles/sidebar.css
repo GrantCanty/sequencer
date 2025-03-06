@@ -18,7 +18,12 @@
     max-width: 100%;
 }
 
+.sidebar-field {
+    all: unset;
+    user-select: none;
+}
+
 .sidebar-field.overlay {
-    background: black;
+    background: red;
     color: white;
   }

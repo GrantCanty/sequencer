@@ -14,13 +14,13 @@ export function SidebarField(props) {
   
     let className = "sidebar-field";
     if (overlay) {
-      className += " overlay";
+        className += " overlay";
     }
   
-    return <div className={className}>
-        {audioFile}
-        {pic && <img src={pic} alt={`Waveform of ${audioFile}`} />}
-        </div>;
+    return  <div className={className}>
+                {audioFile}
+                {pic && <img src={pic} alt={`Waveform of ${audioFile}`} />}
+            </div>;
   }
 
 function DraggableSidebarField(props) {
