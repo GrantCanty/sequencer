@@ -4,6 +4,8 @@ import './assets/sidebar'
 import Sidebar from './assets/sidebar'
 import Sequencer from './assets/sequencer'
 import Settings from './assets/settings'
+import { DndContext, DragOverlay } from "@dnd-kit/core";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 function App() {
   const [play, setPlay] = useState(false)
@@ -28,11 +30,17 @@ function App() {
   
   return (
     <div className='wrapper'>
-      <Sidebar audioList={audioList} />
-      <div className='main-wrapper'>
-      <Settings play={play} togglePlay={togglePlay} bpm={bpm} newBpm={newBpm} />
-      <Sequencer sleepTime={sleepTime} play={play} audioList={audioList} audio={audioList['clap 1']}/>
-      </div>
+      <DndContext
+        onDragStart={() => {}}
+        onDragOver={() => {}}
+        onDragEnd={() => {}}
+      >
+        <Sidebar audioList={audioList} />
+        <div className='main-wrapper'>
+        <Settings play={play} togglePlay={togglePlay} bpm={bpm} newBpm={newBpm} />
+        <Sequencer sleepTime={sleepTime} play={play} audioList={audioList} audio={audioList['clap 1']}/>
+        </div>
+      </DndContext>
     </div>
   )
 }
