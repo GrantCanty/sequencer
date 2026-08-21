@@ -21,6 +21,13 @@
     grid-gap: .5rem;
 }
 
+.sortable-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 5fr;
+    grid-gap: .5rem;
+}
+
 .step-sequencer {
     display: grid;
     grid-gap: .5rem;

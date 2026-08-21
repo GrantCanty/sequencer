@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import SampleRow from './samplerow'
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 export function Row(props) {
     const { audio, overlay, ...rest } = props;
@@ -22,7 +22,7 @@ export function Row(props) {
   }
 
 function SortableRow(props) {
-    const { id, index, audio } = props;
+    const { row, index, playSound, steps, setRows, delete: deleteRow } = props;
   
     const {
       attributes,
@@ -31,11 +31,11 @@ function SortableRow(props) {
       transform,
       transition
     } = useSortable({
-      id,
+      id: row.id,
       data: {
         index,
-        id,
-        audio
+        id: row.id,
+        row
       }
     });
   
@@ -45,54 +45,28 @@ function SortableRow(props) {
     };
   
     return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-        <Row audio={audio} />
+      <div className="sortable-row" ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <SampleRow
+            index={index}
+            row={row}
+            playSound={playSound}
+            steps={steps}
+            setRows={setRows}
+            delete={deleteRow}
+        />
       </div>
     );
   }
 
 const Sequencer = (props) => {
     const steps = 32
-    const defaultSounds = ['clap 1', 'kick 1', 'snare 1']
-    
-    const [rows, setRows] = useState(() => defaultSounds.map((audioFile, index) => ({
-        id: `default-${index}`,
-        audioFile,
-        steps: Array(steps).fill(false),
-    })));
+    const rows = props.rows || []
+    const setRows = props.setRows
     const rowsRef = useRef(rows)
     const [stepIndex, setStepIndex] = useState(0)
     const timeoutRef = useRef(null); 
     const audioContextRef = useRef(null);
     const audioBuffersRef = useRef(null); 
-
-    useEffect(() => {
-        if(!props.audioList) return
-        
-        setRows((currentRows) => currentRows.map((row) => ({
-            ...row,
-            audio: props.audioList[row.audioFile],
-        })));
-    }, [props.audioList]);
-
-    // new dropped fields
-    useEffect(() => {
-        if (!props.droppedFields || !props.audioList) return;
-        
-        const existingIds = new Set(rowsRef.current.map((row) => row.id));
-        const newRows = props.droppedFields
-            .filter((field) => !existingIds.has(field.id) && props.audioList[field.audioFile])
-            .map((field) => ({
-                id: field.id,
-                audioFile: field.audioFile,
-                audio: props.audioList[field.audioFile],
-                steps: Array(steps).fill(false),
-            }));
-
-        if (newRows.length) {
-            setRows((currentRows) => [...currentRows, ...newRows]);
-        }
-    }, [props.droppedFields, props.audioList]);
 
     useEffect(() => {
         rowsRef.current = rows;
@@ -115,7 +89,7 @@ const Sequencer = (props) => {
             const buffers = {};
             await Promise.all(rows.map(async (row) => {
                 try {
-                    const response = await fetch(row.audio || props.audioList[row.audioFile])
+                    const response = await fetch(props.audioList[row.audioFile])
                     const arrayBuffer = await response.arrayBuffer();
                     const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
                     buffers[row.audioFile] = audioBuffer;
@@ -189,15 +163,6 @@ const Sequencer = (props) => {
         id: "sequencer",
     });
 
-    const handleDragEnd = (event) => {
-        const { active } = event; // Get the dragged item
-        console.log("Drag End Event:", event);
-        
-        if (active && active.data.current?.fromSidebar) {
-            console.log("Dropped from Sidebar:", active.data.current.audioFile);
-        }
-    };
-
     return (
         <div ref={setNodeRef} className='sequencer-wrapper drop-zone' style={{ backgroundColor: isOver ? "lightblue" : "black" }} >
             <h1>sequencer!!</h1>
@@ -218,9 +183,19 @@ const Sequencer = (props) => {
                     }
                 </div>
 
-                {rows.map((row, index) => {
-                    return <SampleRow key={row.id} index={index} row={row} playSound={playSound} steps={steps} setRows={setRows} delete={deleteBlock} />
-                })}
+                <SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
+                    {rows.map((row, index) => (
+                        <SortableRow
+                            key={row.id}
+                            row={row}
+                            index={index}
+                            playSound={playSound}
+                            steps={steps}
+                            setRows={setRows}
+                            delete={deleteBlock}
+                        />
+                    ))}
+                </SortableContext>
             </div>
         </div>
     )

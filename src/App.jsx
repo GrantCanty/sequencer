@@ -1,195 +1,116 @@
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import './App.css'
-import './assets/sidebar'
 import Sidebar, { SidebarField } from './assets/sidebar'
 import Sequencer from './assets/sequencer'
 import Settings from './assets/settings'
-import { DndContext, DragOverlay } from "@dnd-kit/core";
-import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useImmer } from "use-immer";
+import { DndContext, DragOverlay } from '@dnd-kit/core'
+import { arrayMove } from '@dnd-kit/sortable'
 
-function getData(prop) {
-  return prop?.data?.current ?? {};
-}
-
-function createSpacer({ id }) {
-  return {
-    id,
-    type: "spacer",
-    title: "spacer"
-  };
+function getData(item) {
+  return item?.data?.current ?? {}
 }
 
 function App() {
   const [play, setPlay] = useState(false)
   const [bpm, setBpm] = useState('125')
+  const [rows, setRows] = useState([
+    { id: 'default-clap', audioFile: 'clap 1', steps: Array(32).fill(false) },
+    { id: 'default-kick', audioFile: 'kick 1', steps: Array(32).fill(false) },
+    { id: 'default-snare', audioFile: 'snare 1', steps: Array(32).fill(false) },
+  ])
+  const dragTypeRef = useRef(null)
+  const [activeSidebarField, setActiveSidebarField] = useState(null)
+  const [activeRow, setActiveRow] = useState(null)
 
-  const [sidebarFieldsRegenKey, setSidebarFieldsRegenKey] = useState(
-    Date.now()
-  );
-  const spacerInsertedRef = useRef();
-  const currentDragFieldRef = useRef();
-  const [activeSidebarField, setActiveSidebarField] = useState();
-  const [activeField, setActiveField] = useState();
-  const [data, updateData] = useImmer({
-    fields: []
-  });
-
-  const togglePlay = () => {
-    setPlay((prevState) => !prevState)
-  }
-
-  function newBpm(e) {
-    if (e.target.value >= 0) {
-      setBpm(e.target.value)
-    }
-  }
-
-  const steps_per_beat = 4
-  let sleepTime =  (60 / bpm) * 1000 / steps_per_beat
-  const audioFiles = import.meta.glob('./audio/*.wav', { eager: true });
+  const audioFiles = import.meta.glob('./audio/*.wav', { eager: true })
   const audioList = Object.fromEntries(
-    Object.entries(audioFiles).map(([key, value]) => [key.replace('./audio/', '').replace('.wav', ''), value.default])
-  );
+    Object.entries(audioFiles).map(([key, value]) => [
+      key.replace('./audio/', '').replace('.wav', ''),
+      value.default,
+    ])
+  )
 
-  const cleanUp = () => {
-    setActiveSidebarField(null);
-    setActiveField(null);
-    currentDragFieldRef.current = null;
-    spacerInsertedRef.current = false;
-  };
+  const resetDrag = () => {
+    dragTypeRef.current = null
+    setActiveSidebarField(null)
+    setActiveRow(null)
+  }
 
-  const handleDragStart = (e) => {
-    const { active } = e;
-    const activeData = getData(active);
+  const handleDragStart = ({ active }) => {
+    const data = getData(active)
 
-    if (activeData.fromSidebar) {
-      const { audioFile } = activeData;
-      setActiveSidebarField(audioFile);
-      currentDragFieldRef.current = {
-        id: active.id,
-        name: audioFile,
-        type: "audio",
-        audioFile: audioFile
-      };
-      return;
+    if (data.fromSidebar) {
+      dragTypeRef.current = { type: 'sidebar', audioFile: data.audioFile }
+      setActiveSidebarField(data.audioFile)
+      return
     }
 
-    const { field, index } = activeData;
-    setActiveField(field);
-    currentDragFieldRef.current = field;
-    updateData((draft) => {
-      draft.fields.splice(index, 1, createSpacer({ id: active.id }));
-    });
-  };
+    const row = rows.find((item) => item.id === active.id)
+    if (row) {
+      dragTypeRef.current = { type: 'row', rowId: row.id }
+      setActiveRow(row)
+    }
+  }
 
-  const handleDragOver = (e) => {
-    const { active, over } = e;
-    const activeData = getData(active);
+  const handleDragEnd = ({ active, over }) => {
+    const drag = dragTypeRef.current
+    if (!drag || !over) {
+      resetDrag()
+      return
+    }
 
-    if (activeData.fromSidebar) {
-      const overData = getData(over);
+    const overData = getData(over)
+    const targetIndex = Number.isInteger(overData.index) ? overData.index : rows.length
 
-      if (!spacerInsertedRef.current) {
-        const spacer = createSpacer({
-          id: active.id + "-spacer"
-        });
-
-        updateData((draft) => {
-          if (!draft.fields.length) {
-            draft.fields.push(spacer);
-          } else {
-            const nextIndex =
-              overData.index > -1 ? overData.index : draft.fields.length;
-
-            draft.fields.splice(nextIndex, 0, spacer);
-          }
-          spacerInsertedRef.current = true;
-        });
-      } else if (!over) {
-        updateData((draft) => {
-          draft.fields = draft.fields.filter((f) => f.type !== "spacer");
-        });
-        spacerInsertedRef.current = false;
-      } else {
-        updateData((draft) => {
-          const spacerIndex = draft.fields.findIndex(
-            (f) => f.id === active.id + "-spacer"
-          );
-
-          const nextIndex =
-            overData.index > -1 ? overData.index : draft.fields.length - 1;
-
-          if (nextIndex === spacerIndex) {
-            return;
-          }
-
-          draft.fields = arrayMove(draft.fields, spacerIndex, overData.index);
-        });
+    if (drag.type === 'sidebar') {
+      const newRow = {
+        id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        audioFile: drag.audioFile,
+        steps: Array(32).fill(false),
       }
-    }
-  };
-
-  const handleDragEnd = (e) => {
-    const { active, over } = e;
-
-    if (!over) {
-      updateData((draft) => {
-        draft.fields = draft.fields.filter((f) => f.type !== "spacer");
-      });
-      cleanUp();
-      return;
-    }
-
-    if (over.id === "sequencer") {
-      const nextField = currentDragFieldRef.current;
-      if (nextField) {
-        if (nextField.audioFile) {
-          updateData((draft) => {
-            const spacerIndex = draft.fields.findIndex(
-              (f) => f.id === active.id + "-spacer"
-            );
-
-            if (spacerIndex >= 0) {
-              draft.fields[spacerIndex] = nextField;
-            } else {
-              draft.fields.push(nextField);
-            }
-          });
-        }
-      }
-    } else {
-      updateData((draft) => {
-        draft.fields = draft.fields.filter((f) => f.type !== "spacer");
-      });
+      setRows((currentRows) => {
+        const nextRows = [...currentRows]
+        nextRows.splice(Math.min(targetIndex, nextRows.length), 0, newRow)
+        return nextRows
+      })
+    } else if (drag.type === 'row' && over.id !== 'sequencer') {
+      setRows((currentRows) => {
+        const fromIndex = currentRows.findIndex((row) => row.id === active.id)
+        const boundedTarget = Math.min(targetIndex, currentRows.length - 1)
+        return fromIndex === -1 || fromIndex === boundedTarget
+          ? currentRows
+          : arrayMove(currentRows, fromIndex, boundedTarget)
+      })
     }
 
-    cleanUp();
-  };
+    resetDrag()
+  }
+
+  const sleepTime = (60 / Number(bpm || 1)) * 1000 / 4
 
   return (
-    <div className='wrapper'>
-      <DndContext
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <Sidebar audioList={audioList} fieldsRegKey={sidebarFieldsRegenKey} />
-        <div className='main-wrapper'>
-          <Settings play={play} togglePlay={togglePlay} bpm={bpm} newBpm={newBpm} />
-          <SortableContext
-            strategy={verticalListSortingStrategy}
-            items={Object.keys(audioList).map((e) => e )}
-          >
-            <Sequencer sleepTime={sleepTime} play={play} audioList={audioList} droppedFields={data.fields.filter(f => f.type === "audio")}/>
-          </SortableContext>
+    <div className="wrapper">
+      <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <Sidebar audioList={audioList} />
+        <div className="main-wrapper">
+          <Settings
+            play={play}
+            togglePlay={() => setPlay((previous) => !previous)}
+            bpm={bpm}
+            newBpm={(event) => setBpm(event.target.value)}
+          />
+          <Sequencer
+            sleepTime={sleepTime}
+            play={play}
+            audioList={audioList}
+            rows={rows}
+            setRows={setRows}
+          />
         </div>
         <DragOverlay dropAnimation={false}>
-            {activeSidebarField ? (
-              <SidebarField overlay audioFile={activeSidebarField} />
-            ) : null}
-            {activeField ?  <div className="dragging-field">{activeField.name}</div> : null}
-          </DragOverlay>
+          {activeSidebarField ? <SidebarField overlay audioFile={activeSidebarField} /> : null}
+          {activeRow ? <div className="dragging-field">{activeRow.audioFile}</div> : null}
+        </DragOverlay>
       </DndContext>
     </div>
   )
