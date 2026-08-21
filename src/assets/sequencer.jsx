@@ -2,39 +2,104 @@ import React from 'react'
 import '../styles/sequencer.css'
 import { useState, useEffect, useRef } from 'react'
 import SampleRow from './samplerow'
+import { useDroppable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { useSortable } from "@dnd-kit/sortable";
+
+export function Row(props) {
+    const { audio, overlay, ...rest } = props;
+  
+    let className = "canvas-field";
+    if (overlay) {
+      className += " overlay";
+    }
+  
+    return (
+      <div className={className}>
+        <div>{audio} </div>
+      </div>
+    );
+  }
+
+function SortableRow(props) {
+    const { id, index, audio } = props;
+  
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition
+    } = useSortable({
+      id,
+      data: {
+        index,
+        id,
+        audio
+      }
+    });
+  
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition
+    };
+  
+    return (
+      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <Row audio={audio} />
+      </div>
+    );
+  }
 
 const Sequencer = (props) => {
     const steps = 32
     const defaultSounds = ['clap 1', 'kick 1', 'snare 1']
     
-    const [sounds, setSounds] = useState({});
-    const [step, setStep] = useState(() => createAndFillTwoDArray({ rows: defaultSounds.length, columns: steps, defaultValue: false }));
-    const stepRef = useRef(step)   
+    const [rows, setRows] = useState(() => defaultSounds.map((audioFile, index) => ({
+        id: `default-${index}`,
+        audioFile,
+        steps: Array(steps).fill(false),
+    })));
+    const rowsRef = useRef(rows)
     const [stepIndex, setStepIndex] = useState(0)
     const timeoutRef = useRef(null); 
     const audioContextRef = useRef(null);
     const audioBuffersRef = useRef(null); 
 
-    function createAndFillTwoDArray({rows, columns, defaultValue}) {
-        return Array.from({ length:rows }, () => Array.from({ length:columns }, ()=> defaultValue))
-    }
-    
     useEffect(() => {
         if(!props.audioList) return
         
-        const newSounds = {}
-        defaultSounds.forEach((val) => {
-            newSounds[val] = props.audioList[val]
-        });
-        setSounds(newSounds);
+        setRows((currentRows) => currentRows.map((row) => ({
+            ...row,
+            audio: props.audioList[row.audioFile],
+        })));
     }, [props.audioList]);
 
+    // new dropped fields
     useEffect(() => {
-        stepRef.current = step;
-    }, [step]);
+        if (!props.droppedFields || !props.audioList) return;
+        
+        const existingIds = new Set(rowsRef.current.map((row) => row.id));
+        const newRows = props.droppedFields
+            .filter((field) => !existingIds.has(field.id) && props.audioList[field.audioFile])
+            .map((field) => ({
+                id: field.id,
+                audioFile: field.audioFile,
+                audio: props.audioList[field.audioFile],
+                steps: Array(steps).fill(false),
+            }));
+
+        if (newRows.length) {
+            setRows((currentRows) => [...currentRows, ...newRows]);
+        }
+    }, [props.droppedFields, props.audioList]);
 
     useEffect(() => {
-        if (!sounds || sounds === undefined || Object.keys(sounds).length === 0) {
+        rowsRef.current = rows;
+    }, [rows]);
+
+    useEffect(() => {
+        if (!rows.length) {
             return
         }
 
@@ -48,12 +113,12 @@ const Sequencer = (props) => {
         
         const loadAudio = async () => {
             const buffers = {};
-            await Promise.all(Object.keys(sounds).map(async (file) => {
+            await Promise.all(rows.map(async (row) => {
                 try {
-                    const response = await fetch(sounds[file])
+                    const response = await fetch(row.audio || props.audioList[row.audioFile])
                     const arrayBuffer = await response.arrayBuffer();
                     const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
-                    buffers[file] = audioBuffer;
+                    buffers[row.audioFile] = audioBuffer;
                 } catch(err) {
                     console.log(err)
                 }
@@ -61,7 +126,7 @@ const Sequencer = (props) => {
             audioBuffersRef.current = buffers
         }
         loadAudio()
-    }, [sounds])
+    }, [rows, props.audioList])
 
     const playSound = (file) => {
         if (!audioContextRef.current || !audioBuffersRef.current[file]) return;
@@ -80,16 +145,8 @@ const Sequencer = (props) => {
 
     useEffect(() => {        
         if (props.play) {
-            let s = Object.keys(sounds)
             setStepIndex(0);
             let i = 0;
-
-            /*stepRef.current.forEach((val, idx) => {
-                if (val[i]) {
-                    console.log("played ", s[idx])
-                    playSound(s[idx])
-                }
-            })*/
 
             let lastTime = performance.now(); // Track when the last step was triggered
             const stepDuration = props.sleepTime; // Time per step in ms
@@ -99,9 +156,9 @@ const Sequencer = (props) => {
                 const elapsedTime = currentTime - lastTime;
 
                 if (firstRun || elapsedTime >= stepDuration) {
-                    stepRef.current.forEach((val, idx) => {
-                        if (val[i]) {
-                            playSound(s[idx])
+                    rowsRef.current.forEach((row) => {
+                        if (row.steps[i]) {
+                            playSound(row.audioFile)
                             firstRun = false
                         }
                     })
@@ -122,28 +179,27 @@ const Sequencer = (props) => {
         }
 
         return () => clearTimeout(timeoutRef.current);
-    }, [props.play, props.sleepTime, sounds]);
+    }, [props.play, props.sleepTime, rows]);
 
     const deleteBlock = (index) => {
-        const newArr = []
-        step.map((row, rowIndex) => {
-            if (rowIndex !== index) {
-                newArr.push(row)
-            }
-        })
-        setStep(newArr)
-
-        const newSounds = {}
-        Object.keys(sounds).map((sound, soundIndex) => {
-            if (soundIndex !== index) {
-                newSounds[sound] = sounds[sound]
-            }
-        })
-        setSounds(newSounds)
+        setRows((currentRows) => currentRows.filter((_, rowIndex) => rowIndex !== index))
     }
 
+    const { setNodeRef, isOver } = useDroppable({
+        id: "sequencer",
+    });
+
+    const handleDragEnd = (event) => {
+        const { active } = event; // Get the dragged item
+        console.log("Drag End Event:", event);
+        
+        if (active && active.data.current?.fromSidebar) {
+            console.log("Dropped from Sidebar:", active.data.current.audioFile);
+        }
+    };
+
     return (
-        <div className='sequencer-wrapper'>
+        <div ref={setNodeRef} className='sequencer-wrapper drop-zone' style={{ backgroundColor: isOver ? "lightblue" : "black" }} >
             <h1>sequencer!!</h1>
             <div className='sequencer'>
                 <div className='sample-area'>
@@ -155,16 +211,15 @@ const Sequencer = (props) => {
                     </div>
                 </div>
                 <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${steps}, 1fr)`}}>
-                    {step.length === 0 || step === undefined ? null :
-                        Object.keys(step[0]).length >0 ?
-                            step[0].map((_, idx) => {
+                    {rows[0]?.steps.length > 0 ?
+                            rows[0].steps.map((_, idx) => {
                                 return <div className={ `block ${stepIndex === idx ? 'active' : 'not-active'}` } key={idx}> { (idx / ((idx % 4)+1) / 4 + 1) % 1 == 0 ? idx / ((idx % 4)+1) / 4 % 4 + 1 : null } </div>
                             }) : null
                     }
                 </div>
 
-                {Object.keys(sounds).map((audio, index) => {
-                    return <SampleRow key={index} index={index} audio={audio} playSound={playSound} steps={steps} step={step} setStep={setStep} delete={deleteBlock} />
+                {rows.map((row, index) => {
+                    return <SampleRow key={row.id} index={index} row={row} playSound={playSound} steps={steps} setRows={setRows} delete={deleteBlock} />
                 })}
             </div>
         </div>

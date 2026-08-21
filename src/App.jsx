@@ -8,7 +8,6 @@ import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useImmer } from "use-immer";
 
-
 function getData(prop) {
   return prop?.data?.current ?? {};
 }
@@ -64,27 +63,19 @@ function App() {
     const { active } = e;
     const activeData = getData(active);
 
-    // This is where the cloning starts.
-    // We set up a ref to the field we're dragging
-    // from the sidebar so that we can finish the clone
-    // in the onDragEnd handler.
     if (activeData.fromSidebar) {
       const { audioFile } = activeData;
       setActiveSidebarField(audioFile);
-      // Create a new field that'll be added to the fields array
-      // if we drag it over the canvas.
       currentDragFieldRef.current = {
         id: active.id,
         name: audioFile,
-        parent: null
+        type: "audio",
+        audioFile: audioFile
       };
       return;
     }
 
-    // We aren't creating a new element so go ahead and just insert the spacer
-    // since this field already belongs to the canvas.
     const { field, index } = activeData;
-
     setActiveField(field);
     currentDragFieldRef.current = field;
     updateData((draft) => {
@@ -96,13 +87,6 @@ function App() {
     const { active, over } = e;
     const activeData = getData(active);
 
-    // Once we detect that a sidebar field is being moved over the canvas
-    // we create the spacer using the sidebar fields id with a spacer suffix and add into the
-    // fields array so that it'll be rendered on the canvas.
-
-    // 🐑 CLONING 🐑
-    // This is where the clone occurs. We're taking the id that was assigned to
-    // sidebar field and reusing it for the spacer that we insert to the canvas.
     if (activeData.fromSidebar) {
       const overData = getData(over);
 
@@ -123,16 +107,11 @@ function App() {
           spacerInsertedRef.current = true;
         });
       } else if (!over) {
-        // This solves the issue where you could have a spacer handing out in the canvas if you drug
-        // a sidebar item on and then off
         updateData((draft) => {
           draft.fields = draft.fields.filter((f) => f.type !== "spacer");
         });
         spacerInsertedRef.current = false;
       } else {
-        // Since we're still technically dragging the sidebar draggable and not one of the sortable draggables
-        // we need to make sure we're updating the spacer position to reflect where our drop will occur.
-        // We find the spacer and then swap it with the over skipping the op if the two indexes are the same
         updateData((draft) => {
           const spacerIndex = draft.fields.findIndex(
             (f) => f.id === active.id + "-spacer"
@@ -152,42 +131,42 @@ function App() {
   };
 
   const handleDragEnd = (e) => {
-    const { over } = e;
+    const { active, over } = e;
 
-    // We dropped outside of the over so clean up so we can start fresh.
     if (!over) {
-      cleanUp();
       updateData((draft) => {
         draft.fields = draft.fields.filter((f) => f.type !== "spacer");
       });
+      cleanUp();
       return;
     }
 
-    // This is where we commit the clone.
-    // We take the field from the this ref and replace the spacer we inserted.
-    // Since the ref just holds a reference to a field that the context is aware of
-    // we just swap out the spacer with the referenced field.
-    let nextField = currentDragFieldRef.current;
+    if (over.id === "sequencer") {
+      const nextField = currentDragFieldRef.current;
+      if (nextField) {
+        if (nextField.audioFile) {
+          updateData((draft) => {
+            const spacerIndex = draft.fields.findIndex(
+              (f) => f.id === active.id + "-spacer"
+            );
 
-    if (nextField) {
-      const overData = getData(over);
-
+            if (spacerIndex >= 0) {
+              draft.fields[spacerIndex] = nextField;
+            } else {
+              draft.fields.push(nextField);
+            }
+          });
+        }
+      }
+    } else {
       updateData((draft) => {
-        const spacerIndex = draft.fields.findIndex((f) => f.type === "spacer");
-        draft.fields.splice(spacerIndex, 1, nextField);
-
-        draft.fields = arrayMove(
-          draft.fields,
-          spacerIndex,
-          overData.index || 0
-        );
+        draft.fields = draft.fields.filter((f) => f.type !== "spacer");
       });
     }
 
-    setSidebarFieldsRegenKey(Date.now());
     cleanUp();
   };
-  
+
   return (
     <div className='wrapper'>
       <DndContext
@@ -198,13 +177,18 @@ function App() {
         <Sidebar audioList={audioList} fieldsRegKey={sidebarFieldsRegenKey} />
         <div className='main-wrapper'>
           <Settings play={play} togglePlay={togglePlay} bpm={bpm} newBpm={newBpm} />
-          <Sequencer sleepTime={sleepTime} play={play} audioList={audioList} audio={audioList['clap 1']}/>
+          <SortableContext
+            strategy={verticalListSortingStrategy}
+            items={Object.keys(audioList).map((e) => e )}
+          >
+            <Sequencer sleepTime={sleepTime} play={play} audioList={audioList} droppedFields={data.fields.filter(f => f.type === "audio")}/>
+          </SortableContext>
         </div>
         <DragOverlay dropAnimation={false}>
             {activeSidebarField ? (
               <SidebarField overlay audioFile={activeSidebarField} />
             ) : null}
-            {activeField ? <Field overlay audioFile={activeField} /> : null}
+            {activeField ?  <div className="dragging-field">{activeField.name}</div> : null}
           </DragOverlay>
       </DndContext>
     </div>

@@ -29,11 +29,11 @@ function DraggableSidebarField(props) {
     const id = useRef(nanoid());
   
     const { attributes, listeners, setNodeRef } = useDraggable({
-      id: id.current,
-      data: {
-        audioFile,
-        fromSidebar: true
-      }
+        id: id.current,
+        data: {
+            audioFile,
+            fromSidebar: true
+        }
     });
   
     return (
@@ -104,21 +104,18 @@ const Sidebar = (props) => {
             });
         };
     }, [waveforms]);
+
+    const handleDragStart = (event, sample) => {
+        event.dataTransfer.setData("sampleData", JSON.stringify(sample)); // Store sample data
+    };
     
     return(
         <>
             <div key={props.fieldsRegKey} className="sidebar">
                 <div className="sidebar-items">
-                    {/*<h1>yoo</h1>
-                    <ul>*/}
                     {Object.keys(props.audioList).map((audioFile, index) => {
-                        /*return <li key={index} onClick={() => handleClick(props.audioList[audioFile])}>
-                            {audioFile}
-                            {waveforms[audioFile] && <img src={waveforms[audioFile]} alt={`Waveform of ${audioFile}`} />}
-                        </li>*/
-                        return <DraggableSidebarField key={index} audioFile={audioFile} pic={waveforms[audioFile]} />
+                        return <DraggableSidebarField key={index} audioFile={audioFile} pic={waveforms[audioFile]} onDragStart={(e) => handleDragStart(e, audioFile)} />
                     })}
-                    {/*</ul>*/}
                 </div>
             </div>
         </>

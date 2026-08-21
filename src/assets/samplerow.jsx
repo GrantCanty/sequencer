@@ -4,27 +4,27 @@ import SampleArea from './samplearea';
 const SampleRow = (props) => {
     
     const toggleIndex = (index) => {
-        props.setStep((prevArray) => {
-            return prevArray.map((row, rowIndex) => {
-                if (rowIndex === props.index) {
-                    return row.map((value, i) => (i === index ? !value : value));
-                }
-                return row;
-            });
-        });
+        props.setRows((currentRows) => currentRows.map((row, rowIndex) => {
+            if (rowIndex !== props.index) return row;
+            return {
+                ...row,
+                steps: row.steps.map((value, stepIndex) => (
+                    stepIndex === index ? !value : value
+                )),
+            };
+        }));
     };
 
-    if (!props.step || !Array.isArray(props.step)) {
+    if (!props.row || !Array.isArray(props.row.steps)) {
         return <div>Loading...</div>
     }
 
     return (
         <>
-            <SampleArea index={props.index} audio={props.audio} playSound={props.playSound} delete={props.delete} />
+            <SampleArea index={props.index} audio={props.row.audioFile} playSound={props.playSound} delete={props.delete} />
             <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${props.steps}, 1fr)`}}>
-                    {props.step == [] || props.step === undefined ? null :
-                        Object.keys(props.step[props.index]).length >0 ?
-                            props.step[props.index].map((val, idx) => {
+                    {props.row.steps.length > 0 ?
+                            props.row.steps.map((val, idx) => {
                                 return <button onClick={() => toggleIndex( idx)} className={ `block ${((idx % 8) - (idx % 4) == 0 ? 'even' : 'odd')} ${(val ? 'active' : 'not-active')}` } key={idx}> | </button>
                             }) : null
                     }

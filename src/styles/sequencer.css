@@ -69,3 +69,9 @@ div.active {
 div.not-active {
     background-color: #3a3a3a;
 }
+
+.drop-zone {
+    position: relative;
+    min-height: 200px;
+    border: 2px dashed #ccc;
+}
