@@ -4,13 +4,19 @@ const SampleArea = (props) => {
     
     return (
         <div className='sample-area'>
-            <div className='sample block' onClick={ () => props.delete(props.index) }>
+            <button
+                type="button"
+                className='sample block delete-sample'
+                aria-label={`Delete ${props.audio}`}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={() => props.delete(props.index)}
+            >
                 <p>
                     <span className="material-symbols-outlined">
                         delete
                     </span>
                 </p>
-            </div>
+            </button>
             <div onClick={ () => props.playSound(props.audio) } className='sample block'>
                 <p>{props.audio}</p>
             </div>

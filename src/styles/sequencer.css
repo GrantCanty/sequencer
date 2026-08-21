@@ -44,6 +44,13 @@ div.block {
     --border-radius: 0.5rem;
 }
 
+button.delete-sample {
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+}
+
 div.sample-area:nth-child(1) div.block {
     background-color: transparent;
     cursor: default;
