@@ -154,7 +154,9 @@ const Sequencer = (props) => {
         }
 
         return () => clearTimeout(timeoutRef.current);
-    }, [props.play, props.sleepTime, rows]);
+    // rowsRef always holds the latest pattern, so changing one step should not
+    // restart playback from the first column.
+    }, [props.play, props.sleepTime]);
 
     const deleteBlock = (index) => {
         setRows((currentRows) => currentRows.filter((_, rowIndex) => rowIndex !== index))
