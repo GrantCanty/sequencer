@@ -67,30 +67,36 @@ async function createTightWaveformUrl(file) {
     return URL.createObjectURL(tightBlob);
 }
 
+const handleClick = (file) => {
+        const audio = new Audio(file);
+        audio.play();
+    }
 
 export function SidebarField(props) {
-    const { audioFile, pic, overlay } = props;
+    const { audioFileName, audioFile, pic, overlay } = props;
+    const displayName = audioFileName ?? audioFile;
   
     let className = "sidebar-field";
     if (overlay) {
         className += " overlay";
     }
   
-    return  <div className={className}>
-                {audioFile}
-                {pic && <img src={pic} alt={`Waveform of ${audioFile}`} />}
+    return  <div className={className} onClick={overlay ? undefined : () => handleClick(audioFile)}>
+                {displayName}
+                {pic && <img src={pic} alt={`Waveform of ${displayName}`} />}
             </div>;
   }
 
 function DraggableSidebarField(props) {
-    const { audioFile, pic, ...rest } = props;
+    const { audioFileName, audioFile, pic, ...rest } = props;
   
     const id = useRef(nanoid());
   
     const { attributes, listeners, setNodeRef } = useDraggable({
         id: id.current,
         data: {
-            audioFile,
+            // The sequencer stores its rows by sample name, not by asset URL.
+            audioFile: audioFileName,
             fromSidebar: true
         }
     });
@@ -102,7 +108,7 @@ function DraggableSidebarField(props) {
         {...listeners}
         {...attributes}
       >
-        <SidebarField audioFile={audioFile} pic={pic} {...rest} />
+        <SidebarField audioFileName={audioFileName} audioFile={audioFile} pic={pic} {...rest} />
       </div>
     );
   }
@@ -110,13 +116,6 @@ function DraggableSidebarField(props) {
 
 const Sidebar = (props) => {
     const [waveforms, setWaveforms] = useState({});
-
-    
-    const handleClick = (file) => {
-        const audio = new Audio(file);
-        audio.play();
-    }
-
     const ffmpeg = new FFmpeg({ log: true });
 
     useEffect(() => {
@@ -177,8 +176,8 @@ const Sidebar = (props) => {
         <>
             <div key={props.fieldsRegKey} className="sidebar">
                 <div className="sidebar-items">
-                    {Object.keys(props.audioList).map((audioFile, index) => {
-                        return <DraggableSidebarField key={index} audioFile={audioFile} pic={waveforms[audioFile]} onDragStart={(e) => handleDragStart(e, audioFile)} />
+                    {Object.keys(props.audioList).map((audioFileName, index) => {
+                        return <DraggableSidebarField key={index} audioFile={props.audioList[audioFileName]} audioFileName={audioFileName} pic={waveforms[audioFileName]} onDragStart={(e) => handleDragStart(e, audioFileName)} />
                     })}
                 </div>
             </div>
