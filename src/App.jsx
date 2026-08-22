@@ -95,6 +95,12 @@ function App() {
     const overData = getData(over)
     if (drag.type === 'sidebar') {
       setRows((currentRows) => {
+        // A sound can appear only once in the playlist. This applies to both
+        // adding a new row and replacing an existing row.
+        if (currentRows.some((row) => row.audioFile === drag.audioFile)) {
+          return currentRows
+        }
+
         // Only a sample label accepts a replacement. Retain its pattern.
         if (overData.target === 'sample-label' && Number.isInteger(overData.index)) {
           return currentRows.map((row, index) => (
