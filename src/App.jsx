@@ -3,7 +3,7 @@ import './App.css'
 import Sidebar, { SidebarField } from './assets/sidebar'
 import Sequencer from './assets/sequencer'
 import Settings from './assets/settings'
-import { DndContext, DragOverlay } from '@dnd-kit/core'
+import { closestCenter, DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 
 function getData(item) {
@@ -21,6 +21,7 @@ function App() {
   const dragTypeRef = useRef(null)
   const [activeSidebarField, setActiveSidebarField] = useState(null)
   const [activeRow, setActiveRow] = useState(null)
+  const [dragOverTarget, setDragOverTarget] = useState(null)
 
   const audioFiles = import.meta.glob('./audio/*.wav', { eager: true })
   const audioList = Object.fromEntries(
@@ -34,6 +35,7 @@ function App() {
     dragTypeRef.current = null
     setActiveSidebarField(null)
     setActiveRow(null)
+    setDragOverTarget(null)
   }
 
   const handleDragStart = ({ active }) => {
@@ -42,6 +44,7 @@ function App() {
     if (data.fromSidebar) {
       dragTypeRef.current = { type: 'sidebar', audioFile: data.audioFile }
       setActiveSidebarField(data.audioFile)
+      setDragOverTarget(null)
       return
     }
 
@@ -52,6 +55,36 @@ function App() {
     }
   }
 
+  const handleDragOver = ({ over }) => {
+    if (dragTypeRef.current?.type !== 'sidebar') return
+
+    if (!over) {
+      setDragOverTarget(null)
+    } else if (over.id === 'sequencer') {
+      setDragOverTarget('sequencer')
+    } else if (getData(over).target === 'sample-label') {
+      setDragOverTarget(getData(over).rowId)
+    } else {
+      setDragOverTarget(null)
+    }
+  }
+
+  const detectCollision = (args) => {
+    if (!getData(args.active).fromSidebar) {
+      return closestCenter(args)
+    }
+
+    const collisions = pointerWithin(args)
+    const sampleLabel = collisions.find(({ id }) => String(id).startsWith('sample-label-'))
+    if (sampleLabel) return [sampleLabel]
+
+    const sortableRow = collisions.find(({ id }) => rows.some((row) => row.id === id))
+    if (sortableRow) return [sortableRow]
+
+    const sequencer = collisions.find(({ id }) => id === 'sequencer')
+    return sequencer ? [sequencer] : []
+  }
+
   const handleDragEnd = ({ active, over }) => {
     const drag = dragTypeRef.current
     if (!drag || !over) {
@@ -60,12 +93,10 @@ function App() {
     }
 
     const overData = getData(over)
-    const targetIndex = Number.isInteger(overData.index) ? overData.index : rows.length
-
     if (drag.type === 'sidebar') {
       setRows((currentRows) => {
-        // A row target means replacement: retain the row identity and pattern.
-        if (over.id !== 'sequencer' && Number.isInteger(overData.index)) {
+        // Only a sample label accepts a replacement. Retain its pattern.
+        if (overData.target === 'sample-label' && Number.isInteger(overData.index)) {
           return currentRows.map((row, index) => (
             index === overData.index
               ? { ...row, audioFile: drag.audioFile }
@@ -73,19 +104,22 @@ function App() {
           ))
         }
 
-        // Dropping onto the empty board appends a new row.
+        if (over.id !== 'sequencer') return currentRows
+
+        // Dropping onto empty board space appends a new row.
         const newRow = {
           id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           audioFile: drag.audioFile,
           steps: Array(32).fill(false),
         }
         const nextRows = [...currentRows]
-        nextRows.splice(Math.min(targetIndex, nextRows.length), 0, newRow)
+        nextRows.push(newRow)
         return nextRows
       })
     } else if (drag.type === 'row' && over.id !== 'sequencer') {
       setRows((currentRows) => {
         const fromIndex = currentRows.findIndex((row) => row.id === active.id)
+        const targetIndex = Number.isInteger(overData.index) ? overData.index : fromIndex
         const boundedTarget = Math.min(targetIndex, currentRows.length - 1)
         return fromIndex === -1 || fromIndex === boundedTarget
           ? currentRows
@@ -100,7 +134,13 @@ function App() {
 
   return (
     <div className="wrapper">
-      <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext
+        collisionDetection={detectCollision}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={resetDrag}
+      >
         <Sidebar audioList={audioList} />
         <div className="main-wrapper">
           <Settings
@@ -115,6 +155,8 @@ function App() {
             audioList={audioList}
             rows={rows}
             setRows={setRows}
+            isSidebarDragging={dragOverTarget === 'sequencer'}
+            replaceTargetId={dragOverTarget === 'sequencer' ? null : dragOverTarget}
           />
         </div>
         <DragOverlay dropAnimation={false}>

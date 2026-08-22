@@ -22,7 +22,7 @@ export function Row(props) {
   }
 
 function SortableRow(props) {
-    const { row, index, playSound, steps, setRows, delete: deleteRow } = props;
+    const { row, index, playSound, steps, setRows, delete: deleteRow, isReplaceTarget } = props;
   
     const {
       attributes,
@@ -53,6 +53,7 @@ function SortableRow(props) {
             steps={steps}
             setRows={setRows}
             delete={deleteRow}
+            isReplaceTarget={isReplaceTarget}
         />
       </div>
     );
@@ -159,12 +160,12 @@ const Sequencer = (props) => {
         setRows((currentRows) => currentRows.filter((_, rowIndex) => rowIndex !== index))
     }
 
-    const { setNodeRef, isOver } = useDroppable({
+    const { setNodeRef } = useDroppable({
         id: "sequencer",
     });
 
     return (
-        <div ref={setNodeRef} className='sequencer-wrapper drop-zone' style={{ backgroundColor: isOver ? "lightblue" : "black" }} >
+        <div ref={setNodeRef} className={`sequencer-wrapper drop-zone ${props.isSidebarDragging ? 'drop-zone-active' : ''}`} >
             <h1>sequencer!!</h1>
             <div className='sequencer'>
                 <div className='sample-area'>
@@ -193,6 +194,7 @@ const Sequencer = (props) => {
                             steps={steps}
                             setRows={setRows}
                             delete={deleteBlock}
+                            isReplaceTarget={props.replaceTargetId === row.id}
                         />
                     ))}
                 </SortableContext>

@@ -21,7 +21,14 @@ const SampleRow = (props) => {
 
     return (
         <>
-            <SampleArea index={props.index} audio={props.row.audioFile} playSound={props.playSound} delete={props.delete} />
+            <SampleArea
+                index={props.index}
+                rowId={props.row.id}
+                audio={props.row.audioFile}
+                playSound={props.playSound}
+                delete={props.delete}
+                isReplaceTarget={props.isReplaceTarget}
+            />
             <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${props.steps}, 1fr)`}}>
                     {props.row.steps.length > 0 ?
                             props.row.steps.map((val, idx) => {

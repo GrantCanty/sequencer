@@ -4,9 +4,20 @@
     margin: 2rem;
     padding: 0.5rem;
 }
+
+.drop-zone {
+    transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.drop-zone-active {
+    background-color: #263a52;
+    border-color: #69b7ff;
+}
   
 .sample {
     background-color: grey;
+    border-radius: 0.75rem;
+    transition: background-color 120ms ease, box-shadow 120ms ease;
 }
 
 .sample-area {
@@ -51,9 +62,18 @@ button.delete-sample {
     padding: 0;
 }
 
-div.sample-area:nth-child(1) div.block {
+.sequencer > .sample-area div.block {
     background-color: transparent;
     cursor: default;
+}
+
+.sample-area .sample-label {
+    background-color: #4c789f;
+    cursor: pointer;
+}
+
+.sample-area .sample-label.replace-target {
+    background-color: #e49b3f;
 }
 
 div.step-sequencer:nth-child(2) div.block {

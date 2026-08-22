@@ -1,6 +1,15 @@
 import React from 'react'
+import { useDroppable } from '@dnd-kit/core'
 
 const SampleArea = (props) => {
+    const { setNodeRef } = useDroppable({
+        id: `sample-label-${props.rowId}`,
+        data: {
+            target: 'sample-label',
+            rowId: props.rowId,
+            index: props.index,
+        },
+    })
     
     return (
         <div className='sample-area'>
@@ -17,7 +26,7 @@ const SampleArea = (props) => {
                     </span>
                 </p>
             </button>
-            <div onClick={ () => props.playSound(props.audio) } className='sample block'>
+            <div ref={setNodeRef} onClick={ () => props.playSound(props.audio) } className={`sample block sample-label ${props.isReplaceTarget ? 'replace-target' : ''}`}>
                 <p>{props.audio}</p>
             </div>
         </div>
