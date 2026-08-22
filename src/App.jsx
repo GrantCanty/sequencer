@@ -29,10 +29,13 @@ function PlaylistRowOverlay({ row }) {
       </div>
       <div className="step-sequencer" style={{ gridTemplateColumns: `repeat(${row.steps.length}, 1fr)` }}>
         {row.steps.map((active, index) => (
-          <div
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
             className={`block ${((index % 8) - (index % 4) === 0 ? 'even' : 'odd')} ${active ? 'active' : 'not-active'}`}
             key={index}
-          >|</div>
+          > | </button>
         ))}
       </div>
     </div>
