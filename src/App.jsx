@@ -3,7 +3,15 @@ import './App.css'
 import Sidebar, { SidebarField } from './assets/sidebar'
 import Sequencer from './assets/sequencer'
 import Settings from './assets/settings'
-import { closestCenter, DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core'
+import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 
 function getData(item) {
@@ -22,6 +30,11 @@ function App() {
   const [activeSidebarField, setActiveSidebarField] = useState(null)
   const [activeRow, setActiveRow] = useState(null)
   const [dragOverTarget, setDragOverTarget] = useState(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  )
 
   const audioFiles = import.meta.glob('./audio/*.wav', { eager: true })
   const audioList = Object.fromEntries(
@@ -78,9 +91,8 @@ function App() {
     const sampleLabel = collisions.find(({ id }) => String(id).startsWith('sample-label-'))
     if (sampleLabel) return [sampleLabel]
 
-    const sortableRow = collisions.find(({ id }) => rows.some((row) => row.id === id))
-    if (sortableRow) return [sortableRow]
-
+    // Playlist rows are sortable only when an existing row is being dragged.
+    // A sidebar sample should treat all other sequencer space as an add target.
     const sequencer = collisions.find(({ id }) => id === 'sequencer')
     return sequencer ? [sequencer] : []
   }
@@ -142,6 +154,7 @@ function App() {
     <div className="wrapper">
       <DndContext
         collisionDetection={detectCollision}
+        sensors={sensors}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}

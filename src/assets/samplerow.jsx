@@ -32,7 +32,7 @@ const SampleRow = (props) => {
             <div className='step-sequencer' style={{'gridTemplateColumns': `repeat(${props.steps}, 1fr)`}}>
                     {props.row.steps.length > 0 ?
                             props.row.steps.map((val, idx) => {
-                                return <button onClick={() => toggleIndex( idx)} className={ `block ${((idx % 8) - (idx % 4) == 0 ? 'even' : 'odd')} ${(val ? 'active' : 'not-active')}` } key={idx}> | </button>
+                                return <button onPointerDown={(event) => event.stopPropagation()} onClick={() => toggleIndex( idx)} className={ `block ${((idx % 8) - (idx % 4) == 0 ? 'even' : 'odd')} ${(val ? 'active' : 'not-active')}` } key={idx}> | </button>
                             }) : null
                     }
             </div>
