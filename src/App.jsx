@@ -14,6 +14,14 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 
+const audioFiles = import.meta.glob('./audio/*.wav', { eager: true })
+const audioList = Object.fromEntries(
+  Object.entries(audioFiles).map(([key, value]) => [
+    key.replace('./audio/', '').replace('.wav', ''),
+    value.default,
+  ])
+)
+
 function getData(item) {
   return item?.data?.current ?? {}
 }
@@ -62,14 +70,6 @@ function App() {
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
     }),
-  )
-
-  const audioFiles = import.meta.glob('./audio/*.wav', { eager: true })
-  const audioList = Object.fromEntries(
-    Object.entries(audioFiles).map(([key, value]) => [
-      key.replace('./audio/', '').replace('.wav', ''),
-      value.default,
-    ])
   )
 
   const restrictRowDrag = useCallback(({ activeNodeRect, transform }) => {
