@@ -40,6 +40,11 @@
     will-change: transform;
 }
 
+.row-drag-overlay {
+    pointer-events: none;
+    width: 100%;
+}
+
 .step-sequencer {
     display: grid;
     grid-gap: .5rem;

@@ -7,7 +7,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { defaultAnimateLayoutChanges, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 function animateLayoutChanges(args) {
-    if (args.isSorting || args.wasDragging) return true;
+    if (args.isSorting) return true;
+    if (args.wasDragging) return false;
     return defaultAnimateLayoutChanges(args);
 }
 
@@ -53,7 +54,7 @@ function SortableRow(props) {
     const style = {
       transform: CSS.Transform.toString(transform),
       transition,
-      opacity: isDragging ? 0.55 : 1,
+      opacity: isDragging ? 0 : 1,
     };
   
     return (

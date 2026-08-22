@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import Sidebar, { SidebarField } from './assets/sidebar'
 import Sequencer from './assets/sequencer'
@@ -7,16 +7,36 @@ import {
   closestCenter,
   DndContext,
   DragOverlay,
-  MeasuringStrategy,
   PointerSensor,
   pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { arraySwap } from '@dnd-kit/sortable'
+import { arrayMove } from '@dnd-kit/sortable'
 
 function getData(item) {
   return item?.data?.current ?? {}
+}
+
+function PlaylistRowOverlay({ row }) {
+  return (
+    <div className="sortable-row row-drag-overlay">
+      <div className="sample-area">
+        <div className="sample block delete-sample">
+          <p><span className="material-symbols-outlined">delete</span></p>
+        </div>
+        <div className="sample block sample-label"><p>{row.audioFile}</p></div>
+      </div>
+      <div className="step-sequencer" style={{ gridTemplateColumns: `repeat(${row.steps.length}, 1fr)` }}>
+        {row.steps.map((active, index) => (
+          <div
+            className={`block ${((index % 8) - (index % 4) === 0 ? 'even' : 'odd')} ${active ? 'active' : 'not-active'}`}
+            key={index}
+          >|</div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function App() {
@@ -28,8 +48,10 @@ function App() {
     { id: 'default-snare', audioFile: 'snare 1', steps: Array(32).fill(false) },
   ])
   const dragTypeRef = useRef(null)
-  const lastSwapTargetRef = useRef(null)
+  const rowDragBoundsRef = useRef(null)
+  const initialActiveNodeRectRef = useRef(null)
   const [activeSidebarField, setActiveSidebarField] = useState(null)
+  const [activeRow, setActiveRow] = useState(null)
   const [dragOverTarget, setDragOverTarget] = useState(null)
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -45,6 +67,21 @@ function App() {
     ])
   )
 
+  const restrictRowDrag = useCallback(({ activeNodeRect, transform }) => {
+    const bounds = rowDragBoundsRef.current
+    const initialRect = initialActiveNodeRectRef.current || activeNodeRect
+    if (!initialRect || !bounds) return { ...transform, x: 0 }
+
+    return {
+      ...transform,
+      x: 0,
+      y: Math.max(
+        bounds.top - initialRect.top,
+        Math.min(transform.y, bounds.bottom - initialRect.bottom),
+      ),
+    }
+  }, [])
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.code !== 'Space' || event.repeat) return
@@ -59,14 +96,15 @@ function App() {
 
   const resetDrag = () => {
     dragTypeRef.current = null
-    lastSwapTargetRef.current = null
+    rowDragBoundsRef.current = null
+    initialActiveNodeRectRef.current = null
     setActiveSidebarField(null)
+    setActiveRow(null)
     setDragOverTarget(null)
   }
 
   const handleDragStart = ({ active }) => {
     const data = getData(active)
-    lastSwapTargetRef.current = null
 
     if (data.fromSidebar) {
       dragTypeRef.current = { type: 'sidebar', audioFile: data.audioFile }
@@ -77,30 +115,21 @@ function App() {
 
     const row = rows.find((item) => item.id === active.id)
     if (row) {
+      initialActiveNodeRectRef.current = active.rect.current?.translated || active.rect.current?.initial || null
+      const rowElements = Array.from(document.querySelectorAll('.sortable-row:not(.row-drag-overlay)'))
+      const rowRects = rowElements.map((element) => element.getBoundingClientRect())
+      rowDragBoundsRef.current = rowRects.length
+        ? {
+            top: Math.min(...rowRects.map((rect) => rect.top)),
+            bottom: Math.max(...rowRects.map((rect) => rect.bottom)),
+          }
+        : null
       dragTypeRef.current = { type: 'row', rowId: row.id }
+      setActiveRow(row)
     }
   }
 
-  const handleDragOver = ({ active, over }) => {
-    if (dragTypeRef.current?.type === 'row') {
-      if (!over || over.id === active.id) {
-        lastSwapTargetRef.current = null
-        return
-      }
-
-      if (lastSwapTargetRef.current === over.id) return
-      lastSwapTargetRef.current = over.id
-
-      setRows((currentRows) => {
-        const activeIndex = currentRows.findIndex((row) => row.id === active.id)
-        const overIndex = currentRows.findIndex((row) => row.id === over.id)
-        return activeIndex === -1 || overIndex === -1
-          ? currentRows
-          : arraySwap(currentRows, activeIndex, overIndex)
-      })
-      return
-    }
-
+  const handleDragOver = ({ over }) => {
     if (dragTypeRef.current?.type !== 'sidebar') return
 
     if (!over) {
@@ -131,9 +160,24 @@ function App() {
     return sequencer ? [sequencer] : []
   }
 
-  const handleDragEnd = ({ over }) => {
+  const handleDragEnd = ({ active, over }) => {
     const drag = dragTypeRef.current
-    if (!drag || !over) {
+    if (!drag) {
+      resetDrag()
+      return
+    }
+
+    if (drag.type === 'row') {
+      if (over && active.id !== over.id) {
+        setRows((currentRows) => {
+          const activeIndex = currentRows.findIndex((row) => row.id === active.id)
+          const overIndex = currentRows.findIndex((row) => row.id === over.id)
+          if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
+            return arrayMove(currentRows, activeIndex, overIndex)
+          }
+          return currentRows
+        })
+      }
       resetDrag()
       return
     }
@@ -156,7 +200,7 @@ function App() {
           ))
         }
 
-        if (over.id !== 'sequencer') return currentRows
+        if (!over || over.id !== 'sequencer') return currentRows
 
         // Dropping onto empty board space appends a new row.
         const newRow = {
@@ -179,9 +223,7 @@ function App() {
     <div className="wrapper">
       <DndContext
         collisionDetection={detectCollision}
-        measuring={{
-          droppable: { strategy: MeasuringStrategy.Always },
-        }}
+        modifiers={activeRow ? [restrictRowDrag] : undefined}
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
@@ -206,8 +248,9 @@ function App() {
             replaceTargetId={dragOverTarget === 'sequencer' ? null : dragOverTarget}
           />
         </div>
-        <DragOverlay dropAnimation={false}>
+        <DragOverlay dropAnimation={false} modifiers={activeRow ? [restrictRowDrag] : undefined}>
           {activeSidebarField ? <SidebarField overlay audioFile={activeSidebarField} /> : null}
+          {!activeSidebarField && activeRow ? <PlaylistRowOverlay row={activeRow} /> : null}
         </DragOverlay>
       </DndContext>
     </div>
