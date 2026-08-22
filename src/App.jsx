@@ -275,7 +275,7 @@ function App() {
             play={play}
             togglePlay={() => setPlay((previous) => !previous)}
             bpm={bpm}
-            newBpm={(event) => setBpm(event.target.value)}
+            newBpm={setBpm}
           />
           <Sequencer
             sleepTime={sleepTime}
