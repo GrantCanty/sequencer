@@ -64,6 +64,7 @@ const Sequencer = (props) => {
     const rows = props.rows || []
     const setRows = props.setRows
     const rowsRef = useRef(rows)
+    const stepDurationRef = useRef(props.sleepTime)
     const [stepIndex, setStepIndex] = useState(0)
     const timeoutRef = useRef(null); 
     const audioContextRef = useRef(null);
@@ -72,6 +73,10 @@ const Sequencer = (props) => {
     useEffect(() => {
         rowsRef.current = rows;
     }, [rows]);
+
+    useEffect(() => {
+        stepDurationRef.current = props.sleepTime;
+    }, [props.sleepTime]);
 
     useEffect(() => {
         if (!rows.length) {
@@ -124,9 +129,8 @@ const Sequencer = (props) => {
             let i = 0;
 
             let lastTime = performance.now(); // Track when the last step was triggered
-            const stepDuration = props.sleepTime; // Time per step in ms
-
             const scheduleStep = (firstRun = false) => {
+                const stepDuration = stepDurationRef.current;
                 const currentTime = performance.now();
                 const elapsedTime = currentTime - lastTime;
 
@@ -156,7 +160,7 @@ const Sequencer = (props) => {
         return () => clearTimeout(timeoutRef.current);
     // rowsRef always holds the latest pattern, so changing one step should not
     // restart playback from the first column.
-    }, [props.play, props.sleepTime]);
+    }, [props.play]);
 
     const deleteBlock = (index) => {
         setRows((currentRows) => currentRows.filter((_, rowIndex) => rowIndex !== index))
