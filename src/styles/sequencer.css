@@ -37,6 +37,7 @@
     grid-column: 1 / -1;
     grid-template-columns: 1fr 5fr;
     grid-gap: .5rem;
+    will-change: transform;
 }
 
 .step-sequencer {

@@ -4,7 +4,12 @@ import { useState, useEffect, useRef } from 'react'
 import SampleRow from './samplerow'
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { defaultAnimateLayoutChanges, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+
+function animateLayoutChanges(args) {
+    if (args.isSorting || args.wasDragging) return true;
+    return defaultAnimateLayoutChanges(args);
+}
 
 export function Row(props) {
     const { audio, overlay, ...rest } = props;
@@ -29,19 +34,26 @@ function SortableRow(props) {
       listeners,
       setNodeRef,
       transform,
-      transition
+      transition,
+      isDragging,
     } = useSortable({
       id: row.id,
       data: {
         index,
         id: row.id,
         row
-      }
+      },
+      animateLayoutChanges,
+      transition: {
+        duration: 180,
+        easing: 'ease',
+      },
     });
   
     const style = {
       transform: CSS.Transform.toString(transform),
-      transition
+      transition,
+      opacity: isDragging ? 0.55 : 1,
     };
   
     return (
