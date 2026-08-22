@@ -63,12 +63,22 @@ function App() {
     const targetIndex = Number.isInteger(overData.index) ? overData.index : rows.length
 
     if (drag.type === 'sidebar') {
-      const newRow = {
-        id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        audioFile: drag.audioFile,
-        steps: Array(32).fill(false),
-      }
       setRows((currentRows) => {
+        // A row target means replacement: retain the row identity and pattern.
+        if (over.id !== 'sequencer' && Number.isInteger(overData.index)) {
+          return currentRows.map((row, index) => (
+            index === overData.index
+              ? { ...row, audioFile: drag.audioFile }
+              : row
+          ))
+        }
+
+        // Dropping onto the empty board appends a new row.
+        const newRow = {
+          id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          audioFile: drag.audioFile,
+          steps: Array(32).fill(false),
+        }
         const nextRows = [...currentRows]
         nextRows.splice(Math.min(targetIndex, nextRows.length), 0, newRow)
         return nextRows
