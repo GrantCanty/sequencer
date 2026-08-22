@@ -50,8 +50,10 @@ function App() {
   const dragTypeRef = useRef(null)
   const rowDragBoundsRef = useRef(null)
   const initialActiveNodeRectRef = useRef(null)
+  const rowSlotRectsRef = useRef([])
   const [activeSidebarField, setActiveSidebarField] = useState(null)
   const [activeRow, setActiveRow] = useState(null)
+  const [activeRowSlotIndex, setActiveRowSlotIndex] = useState(null)
   const [dragOverTarget, setDragOverTarget] = useState(null)
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -82,6 +84,21 @@ function App() {
     }
   }, [])
 
+  const snapRowOverlayToSlot = useCallback(({ transform }) => {
+    const slots = rowSlotRectsRef.current
+    const originIndex = dragTypeRef.current?.originIndex
+    const originSlot = slots[originIndex]
+    const targetSlot = slots[activeRowSlotIndex]
+
+    if (!originSlot || !targetSlot) return { ...transform, x: 0 }
+
+    return {
+      ...transform,
+      x: 0,
+      y: targetSlot.top - originSlot.top,
+    }
+  }, [activeRowSlotIndex])
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.code !== 'Space' || event.repeat) return
@@ -98,8 +115,10 @@ function App() {
     dragTypeRef.current = null
     rowDragBoundsRef.current = null
     initialActiveNodeRectRef.current = null
+    rowSlotRectsRef.current = []
     setActiveSidebarField(null)
     setActiveRow(null)
+    setActiveRowSlotIndex(null)
     setDragOverTarget(null)
   }
 
@@ -117,19 +136,36 @@ function App() {
     if (row) {
       initialActiveNodeRectRef.current = active.rect.current?.translated || active.rect.current?.initial || null
       const rowElements = Array.from(document.querySelectorAll('.sortable-row:not(.row-drag-overlay)'))
-      const rowRects = rowElements.map((element) => element.getBoundingClientRect())
+      const rowRects = rowElements
+        .map((element) => element.getBoundingClientRect())
+        .sort((first, second) => first.top - second.top)
+      const originIndex = rows.findIndex((item) => item.id === row.id)
+      rowSlotRectsRef.current = rowRects
       rowDragBoundsRef.current = rowRects.length
         ? {
             top: Math.min(...rowRects.map((rect) => rect.top)),
             bottom: Math.max(...rowRects.map((rect) => rect.bottom)),
           }
         : null
-      dragTypeRef.current = { type: 'row', rowId: row.id }
+      dragTypeRef.current = { type: 'row', rowId: row.id, originIndex }
       setActiveRow(row)
+      setActiveRowSlotIndex(originIndex)
     }
   }
 
   const handleDragOver = ({ over }) => {
+    if (dragTypeRef.current?.type === 'row') {
+      if (!over) return
+
+      const targetIndex = rows.findIndex((row) => row.id === over.id)
+      if (targetIndex !== -1) {
+        setActiveRowSlotIndex((currentIndex) => (
+          currentIndex === targetIndex ? currentIndex : targetIndex
+        ))
+      }
+      return
+    }
+
     if (dragTypeRef.current?.type !== 'sidebar') return
 
     if (!over) {
@@ -248,7 +284,11 @@ function App() {
             replaceTargetId={dragOverTarget === 'sequencer' ? null : dragOverTarget}
           />
         </div>
-        <DragOverlay dropAnimation={false} modifiers={activeRow ? [restrictRowDrag] : undefined}>
+        <DragOverlay
+          dropAnimation={false}
+          modifiers={activeRow ? [snapRowOverlayToSlot] : undefined}
+          transition="transform 180ms ease"
+        >
           {activeSidebarField ? <SidebarField overlay audioFile={activeSidebarField} /> : null}
           {!activeSidebarField && activeRow ? <PlaylistRowOverlay row={activeRow} /> : null}
         </DragOverlay>
