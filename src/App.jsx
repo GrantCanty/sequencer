@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import Sidebar, { SidebarField } from './assets/sidebar'
 import Sequencer from './assets/sequencer'
@@ -43,6 +43,18 @@ function App() {
       value.default,
     ])
   )
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.code !== 'Space' || event.repeat) return
+
+      event.preventDefault()
+      setPlay((isPlaying) => !isPlaying)
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const resetDrag = () => {
     dragTypeRef.current = null
