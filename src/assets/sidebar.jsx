@@ -1,70 +1,72 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import '../styles/sidebar.css'
-import { FFmpeg } from '@ffmpeg/ffmpeg'
-import { fetchFile } from '@ffmpeg/util'
-import coreURL from '@ffmpeg/core?url'
-import wasmURL from '@ffmpeg/core/wasm?url'
 import { useDraggable } from "@dnd-kit/core";
-import { useRef } from "react";
 import { nanoid } from "nanoid";
 
-async function createTightWaveformUrl(file) {
-    const sourceUrl = URL.createObjectURL(new Blob([file], { type: 'image/png' }));
-    const image = await new Promise((resolve, reject) => {
-        const nextImage = new Image();
-        nextImage.onload = () => resolve(nextImage);
-        nextImage.onerror = reject;
-        nextImage.src = sourceUrl;
-    });
+async function createWaveformUrl(audioBuffer) {
+    const width = 640;
+    const height = 120;
+    const verticalPadding = 8;
+    const samples = audioBuffer.getChannelData(0);
+    const silenceThreshold = 10 ** (-50 / 20);
+    let firstSample = 0;
+    let lastSample = samples.length - 1;
 
-    const sourceCanvas = document.createElement('canvas');
-    sourceCanvas.width = image.width;
-    sourceCanvas.height = image.height;
-    const sourceContext = sourceCanvas.getContext('2d');
-    sourceContext.drawImage(image, 0, 0);
-
-    const { data, width, height } = sourceContext.getImageData(0, 0, image.width, image.height);
-    let firstVisibleColumn = width;
-    let lastVisibleColumn = -1;
-    let firstVisibleRow = height;
-    let lastVisibleRow = -1;
-
-    for (let x = 0; x < width; x += 1) {
-        for (let y = 0; y < height; y += 1) {
-            const offset = (y * width + x) * 4;
-            const brightness = data[offset] + data[offset + 1] + data[offset + 2];
-            if (data[offset + 3] > 10 && brightness > 60) {
-                firstVisibleColumn = Math.min(firstVisibleColumn, x);
-                lastVisibleColumn = Math.max(lastVisibleColumn, x);
-                firstVisibleRow = Math.min(firstVisibleRow, y);
-                lastVisibleRow = Math.max(lastVisibleRow, y);
-            }
-        }
+    while (firstSample < lastSample && Math.abs(samples[firstSample]) < silenceThreshold) {
+        firstSample += 1;
     }
 
-    if (lastVisibleColumn < firstVisibleColumn || lastVisibleRow < firstVisibleRow) return sourceUrl;
+    while (lastSample > firstSample && Math.abs(samples[lastSample]) < silenceThreshold) {
+        lastSample -= 1;
+    }
 
-    const tightCanvas = document.createElement('canvas');
-    tightCanvas.width = width;
-    tightCanvas.height = height;
-    const verticalPadding = 8;
-    tightCanvas.getContext('2d').drawImage(
-        sourceCanvas,
-        firstVisibleColumn,
-        firstVisibleRow,
-        lastVisibleColumn - firstVisibleColumn + 1,
-        lastVisibleRow - firstVisibleRow + 1,
-        0,
-        verticalPadding,
-        width,
-        height - verticalPadding * 2,
-    );
+    const visibleSampleCount = lastSample - firstSample + 1;
+    const waveformPoints = [];
 
-    const tightBlob = await new Promise((resolve) => tightCanvas.toBlob(resolve, 'image/png'));
-    if (!tightBlob) return sourceUrl;
+    for (let x = 0; x < width; x += 1) {
+        const bucketStart = firstSample + Math.floor((x / width) * visibleSampleCount);
+        const bucketEnd = Math.min(
+            lastSample + 1,
+            firstSample + Math.floor(((x + 1) / width) * visibleSampleCount),
+        );
+        let representativeSample = samples[bucketStart] || 0;
 
-    URL.revokeObjectURL(sourceUrl);
-    return URL.createObjectURL(tightBlob);
+        for (let index = bucketStart + 1; index < Math.max(bucketStart + 1, bucketEnd); index += 1) {
+            if (Math.abs(samples[index]) > Math.abs(representativeSample)) {
+                representativeSample = samples[index];
+            }
+        }
+
+        waveformPoints.push(representativeSample);
+    }
+
+    const peak = Math.max(...waveformPoints.map((sample) => Math.abs(sample)), 0.0001);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    const centerY = height / 2;
+    const amplitude = centerY - verticalPadding;
+
+    context.beginPath();
+    waveformPoints.forEach((sample, index) => {
+        const x = (index / (waveformPoints.length - 1)) * (width - 1);
+        const y = centerY - (sample / peak) * amplitude;
+
+        if (index === 0) {
+            context.moveTo(x, y);
+        } else {
+            context.lineTo(x, y);
+        }
+    });
+    context.strokeStyle = '#FFFFFF';
+    context.lineWidth = 2;
+    context.lineJoin = 'round';
+    context.lineCap = 'round';
+    context.stroke();
+
+    const waveformBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    return waveformBlob ? URL.createObjectURL(waveformBlob) : null;
 }
 
 const handleClick = (file) => {
@@ -116,45 +118,41 @@ function DraggableSidebarField(props) {
 
 const Sidebar = (props) => {
     const [waveforms, setWaveforms] = useState({});
-    const ffmpeg = new FFmpeg({ log: true });
 
     useEffect(() => {
+        let cancelled = false;
+
         const generateWaveforms = async () => {
-            try {
-                if (!ffmpeg.loaded) {
-                    await ffmpeg.load({ coreURL, wasmURL })
-                }
-            }
-            catch (error) {
-                console.error("error loading ffmpeg: ", error)
-            }
+            const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+            const decoder = new OfflineAudioContext(1, 1, 44100);
+            const newWaveforms = {};
 
-            const newWaveforms = {}
-
-            await Promise.all(Object.keys(props.audioList).map(async (audioFile, index) => {
+            await Promise.all(Object.keys(props.audioList).map(async (audioFile) => {
                 try {
-                    await ffmpeg.writeFile(`sound${index}.wav`, await fetchFile(props.audioList[audioFile]))
-                    await ffmpeg.exec([
-                        '-i', `sound${index}.wav`,
-                        '-filter_complex',
-                        'compand,silenceremove=stop_periods=-1:stop_duration=0.05:stop_threshold=-50dB,showwavespic=s=640x120:colors=#FFFFFF',
-                        '-frames:v', '1',
-                        `output${index}.png`,
-                    ])
-                    let pic = await ffmpeg.readFile(`output${index}.png`)
-                    const imageUrl = await createTightWaveformUrl(pic);
-                    
-                    newWaveforms[audioFile] = imageUrl;
-
-
+                    const response = await fetch(props.audioList[audioFile]);
+                    const sourceBuffer = await response.arrayBuffer();
+                    const decodedAudio = await decoder.decodeAudioData(sourceBuffer);
+                    newWaveforms[audioFile] = await createWaveformUrl(decodedAudio);
                 } catch (error) {
                     console.error('error processing', error)
                 }
-            }))
-            setWaveforms(newWaveforms)
+            }));
+
+            if (cancelled) {
+                Object.values(newWaveforms).forEach((url) => {
+                    if (url) URL.revokeObjectURL(url);
+                });
+                return;
+            }
+
+            setWaveforms(newWaveforms);
 
         }
         generateWaveforms();
+
+        return () => {
+            cancelled = true;
+        };
     }, [props.audioList])
 
     useEffect(() => {
