@@ -50,6 +50,11 @@
     grid-gap: .5rem;
 }
 
+.step-sequencer button.block {
+    touch-action: none;
+    user-select: none;
+}
+
 div .block {
     border-radius: 0.5rem;
 }
