@@ -1,6 +1,6 @@
 import React from 'react'
 import '../styles/sequencer.css'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import SampleRow from './samplerow'
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -76,6 +76,7 @@ const Sequencer = (props) => {
     const steps = 32
     const rows = props.rows || []
     const setRows = props.setRows
+    const rowIds = useMemo(() => rows.map((row) => row.id), [rows])
     const rowsRef = useRef(rows)
     const stepDurationRef = useRef(props.sleepTime)
     const [stepIndex, setStepIndex] = useState(0)
@@ -203,7 +204,7 @@ const Sequencer = (props) => {
                     }
                 </div>
 
-                <SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
                     {rows.map((row, index) => (
                         <SortableRow
                             key={row.id}
